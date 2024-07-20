@@ -1,0 +1,464 @@
+#use-added-syntax(jitx)
+defpackage voltage-divider/solver:
+  import core
+  import collections
+  import json
+
+  import jitx with :
+    prefix(Resistor) => EModel-
+    prefix(Capacitor) => EModel-
+    prefix(Inductor) => EModel-
+  import jitx/commands
+
+  import jitx/parts/query-api
+  import jitx/parts/legacy-ocdb-structures
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/design/settings
+
+  import voltage-divider/errors
+
+doc: \<DOC>
+Standard Precision Values
+
+This is the default set of precisions that will
+be searched to satisfy a set of voltage divider constraints
+<DOC>
+public val std-precs = [(20 %), (10 %), (5 %), (2 %), (1 %), (0.5 %), (0.25 %), (0.1 %)]
+
+doc: \<DOC>
+Voltage Divider Solution Type
+<DOC>
+public defstruct VoltageDividerSolution :
+  doc: \<DOC>
+  High Resistor in the voltage divider circuit configuration
+  <DOC>
+  r1: Resistor
+  doc: \<DOC>
+  Low Resistor in the voltage divider circuit configuration
+  <DOC>
+  r2: Resistor
+  doc: \<DOC>
+  Output Voltage Range
+  This voltage is computed over the precision and the variation
+  of this resistor in temperature over the operating temperature
+  range.
+  <DOC>
+  vo: Toleranced
+
+doc: \<DOC>
+Internal Result Type Primarily to support Sorting
+<DOC>
+defstruct Ratio :
+  doc: \<DOC>
+  High Side Divider Resistor Value in Ohms
+  This value is assumed to be from a particular precision
+  series as defined in the algorithm below.
+  <DOC>
+  high: Double
+  doc: \<DOC>
+  Low Side Divider Resistor Value in Ohms
+  This value is assumed to be from a particular precision
+  series as defined in the algorithm below.
+  <DOC>
+  low: Double
+  doc: \<DOC>
+  Loss Metric Used for Sorting which `Ratio` values to use in ultimate solution.
+  <DOC>
+  loss: Double
+
+val DEF_MIN_SRCS = 3
+val DEF_QUERY_LIMIT = 50
+val DEF_SEARCH_RANGE = (10 %)
+
+doc: \<DOC>
+Voltage Divider Constraints
+
+This type encapsulates the necessary parameters for the
+solver as well as other logistics parameters
+for the generated result.
+<DOC>
+public defstruct VoltageDividerConstraints:
+  doc: \<DOC>
+  Input Voltage Range
+  This parameter encodes the typical DC voltage
+  range for the input.
+  <DOC>
+  v-in:Toleranced
+  doc: \<DOC>
+  Desired Voltage Output Range
+  Construct a voltage divider such that the specified
+  input voltage results in a output voltage in this range.
+  <DOC>
+  v-out:Toleranced
+  doc: \<DOC>
+  Max current in amps allowed through the divider
+  <DOC>
+  current:Double with:
+    ensure => ensure-positive!
+
+  doc: \<DOC>
+  Set of precision series to search
+  By default, we search the following series:
+    [(20 %), (10 %), (5 %), (2 %), (1 %), (0.5 %), (0.25 %), (0.1 %)]
+  The user can customize this series by pass an overriding series.
+  <DOC>
+  prec-series:Tuple<Percentage> with:
+    default => std-precs
+
+  doc: \<DOC>
+  Set the search range for components to select
+  This algorithm does a pre-screening of resistor values based on
+  the `v-in`, `v-out`, and `current` parameters. Then this
+  parameter limits how far from these pre-screen values we're willing
+  to search to find an acceptable solution.
+  <DOC>
+  search-range:Percentage with:
+    ensure => ensure-positive!
+    default => DEF_SEARCH_RANGE
+  doc: \<DOC>
+  Set the minimum number of sources
+
+  When pulling resistors from the database, this algorithm will
+  limit the selection of resistors to only those components
+  for which there are at least `min-sources` number of manufacturers
+  for comparable parts.
+  By default this value is 3.
+  <DOC>
+  min-sources:Int with:
+    ensure => ensure-positive!
+    default => DEF_MIN_SRCS
+  doc: \<DOC>
+  Query Limiter for Results
+
+  For many resistors, there may be 1000's of parts that
+  match a particular query. This parameter limits the
+  number of returned results to some max so as not to
+  overload the parts database. The default value is 50.
+  This value must be greater than the `min-sources`
+  parameter.
+  <DOC>
+  query-limit:Int with:
+    ensure => ensure-positive!
+    default => DEF_QUERY_LIMIT
+
+  doc: \<DOC>
+  Temperature Range for TCR evaluation.
+  By default this value will use the `OPERATING-TEMPERATURE`
+  specified in the JSL design settings.
+  <DOC>
+  temp-range:Toleranced with:
+    default => OPERATING-TEMPERATURE
+  doc: \<DOC>
+  Base ResistorQuery
+
+  This object allows the user to further fine tune the
+  selected resistors as part of the solver. The global
+  design level defaults will still apply but this can
+  be used to override or add to the query parameters.
+  Avoid specifying the `resistance`, `tolerance`, or
+  `precision` values in this base query builder.
+  <DOC>
+  base-query:ResistorQuery with:
+    default => ResistorQuery()
+with:
+  constructor => #VoltageDividerConstraints
+
+public defn VoltageDividerConstraints (
+  --
+  v-in:Toleranced,
+  v-out:Toleranced,
+  current:Double,
+  prec-series:Collection<Percentage> = std-precs,
+  search-range:Percentage = DEF_SEARCH_RANGE
+  min-sources:Int = DEF_MIN_SRCS,
+  query-limit:Int = DEF_QUERY_LIMIT
+  temp-range:Toleranced = OPERATING-TEMPERATURE
+  base-query:ResistorQuery = ResistorQuery()
+  ) -> VoltageDividerConstraints:
+
+  val series = to-vector<Percentage>(prec-series)
+  qsort!(series)
+  ; Sort in Descending order
+  reverse!(series)
+
+  if min-sources > query-limit:
+    throw $ ValueError(
+      "Min Sources must be less than Query Limit: min-sources=%_ query-limit=%_" % [min-sources, query-limit]
+    )
+
+  #VoltageDividerConstraints(
+    v-in, v-out, current,
+    to-tuple(series), search-range, min-sources, query-limit,
+    temp-range, base-query
+  )
+
+defn compute-goal-R (cxt:VoltageDividerConstraints) -> [Double, Double]:
+  val goal-r-hi = (typ-value(v-in(cxt)) - typ-value(v-out(cxt))) / current(cxt)
+  val goal-r-lo = typ-value(v-out(cxt)) / current(cxt)
+
+  [goal-r-hi, goal-r-lo]
+
+public defn solve (cxt:VoltageDividerConstraints) -> VoltageDividerSolution :
+
+  ; This sets the range of values that we consider. Currently,
+  ; We use the maximum precision value to set our
+  ;  search distance.
+  val search-prec = search-range(cxt)
+
+  val [goal-r-hi, goal-r-lo] = compute-goal-R(cxt)
+
+  ; Run an initial filter on precision series to remove any
+  ;  precision values that will obviously not work.
+  ; NOTE - `prec-series` is expected to be sorted in
+  ;  descending order
+  val first-valid-series = for std-prec in prec-series(cxt) index-when :
+    val r-hi = goal-r-hi +/- std-prec
+    val r-lo = goal-r-lo +/- std-prec
+    val vo = compute-output-voltage-range(v-in(cxt), r-lo, r-hi)
+    in-range?(v-out(cxt), vo)
+
+  val series = match(first-valid-series:Int):
+    prec-series(cxt)[first-valid-series to false]
+  else:
+    throw $ NoSolutionFoundError("No Precision Series can satisfy initial constraints")
+
+  ; println("Valid Precision Series: %_" % [series])
+  val sol? = for std-prec in series first:
+    println("-> Precision %_" % [std-prec])
+    solve-over-series(cxt, std-prec, search-prec)
+
+  match(sol?):
+    (sol:One<VoltageDividerSolution>): value(sol)
+    (sol):
+      throw $ NoSolutionFoundError("Failed to Source Resistors to Satisfy Voltage Divider Constraints")
+
+
+doc: \<DOC>
+Solve for the Voltage Divider over a particular Precision Series
+@param cxt Voltage Divider Constraints
+@param precision Series precision for which we will search
+@param search-prec Range over which we will accept resistors. This
+sets the +/- percentage range over which we will search for resistors
+that are similar to the goal resistor values.
+<DOC>
+public defn solve-over-series (
+  cxt:VoltageDividerConstraints,
+  precision: Percentage,
+  search-prec: Percentage) -> Maybe<VoltageDividerSolution> :
+
+  val [goal-r-hi, goal-r-lo] = compute-goal-R(cxt)
+
+  ; Find best resistors matching output requirement - this
+  ;  function makes a query
+  val hi-res = query-resistance-by-values(cxt, goal-r-hi, precision, search-prec)
+  val lo-res = query-resistance-by-values(cxt, goal-r-lo, precision, search-prec)
+
+  ; println("Num Hi: %_  Lo: %_" % [length(hi-res), length(lo-res)])
+
+  for ratio in sort-pairs-by-best-fit(cxt, precision, hi-res, lo-res) first :
+    filter-query-results(cxt, ratio, precision)
+
+
+doc: \<DOC>
+Query for the resistor objects and filter-based on physical characteristics
+@param cxt The voltage divider's constraints and search parameters
+@param ratio Explicit High and Low side resistance values from the current precision series to evaluate.
+@param precision Precision series as a percentage value.
+<DOC>
+defn filter-query-results (
+  cxt:VoltageDividerConstraints,
+  ratio:Ratio,
+  precision:Percentage
+  ) -> Maybe<VoltageDividerSolution> :
+  println("    - Querying resistors for R1=%_Ω R2=%_Ω" % [high(ratio), low(ratio)])
+  val r-his = query-resistors(cxt, high(ratio), precision)
+  val r-los = query-resistors(cxt, low(ratio), precision)
+
+  val min-srcs = min-sources(cxt)
+
+  label<Maybe<VoltageDividerSolution>> return:
+
+    if length(r-his) < min-srcs or length(r-los) < min-srcs :
+      println("      Ignoring: there must at least %_ resistors of each type" % [min-srcs])
+      None()
+
+    val r-hi-cmp = r-his[0]
+    val r-lo-cmp = r-los[0]
+    val vo-set = study-solution(v-in(cxt), r-hi-cmp, r-lo-cmp, temp-range(cxt))
+    val vo-valids = to-tuple $ for vo in vo-set seq:
+      in-range?(v-out(cxt), vo)
+
+    val is-valid? = all?({_}, vo-valids)
+
+    if not is-valid? :
+      println("      Ignoring: not a solution when taking into account TCRs.")
+      defn fmt (ok:True|False, vo:Toleranced):
+        match(ok:True):
+          "OK"
+        else:
+          "FAIL (%_ V)" % [vo]
+
+      println("        min-temp: %_"% [fmt(vo-valids[0], vo-set[0])])
+      println("        max-temp: %_" % [fmt(vo-valids[1], vo-set[1])])
+      None()
+
+    println("      Solved: mpn1=%_, mpn2=%_, v-out=(%,V), current=%_A"
+            % [mpn(r-hi-cmp), mpn(r-lo-cmp), vo-set, typ-value(vo-set[0]) / low(ratio)])
+    ; TODO - compute the worst case v-out here and use that instead of
+    ;  just the first (min temperature) one
+    val worst-case-vo = vo-set[0]
+    One $ VoltageDividerSolution(r-hi-cmp, r-lo-cmp, worst-case-vo)
+
+
+doc: \<DOC>
+Find the best fit resistance pairs from this series.
+
+@param v-in Input Voltage Range as specified to the solver
+@param v-out Desired output voltage range as specified to the solver
+@param precision E-Series Precision for these families of resistors
+@param hi-res Set of nominal resistance values in ohms for components in this series
+@param lo-res Set of nominal resistance values in ohms for components in this series
+<DOC>
+defn sort-pairs-by-best-fit (
+  cxt:VoltageDividerConstraints,
+  precision: Percentage,
+  hi-res: Tuple<Double>,
+  lo-res: Tuple<Double>) -> Tuple<Ratio> :
+  qsort{loss, _} $
+    for rh in hi-res seq-cat :
+      for rl in lo-res seq? :
+        val vo = compute-output-voltage-range(
+          v-in(cxt),
+          rl +/- precision,
+          rh +/- precision
+        )
+        if in-range?(v-out(cxt), vo) :
+          ; This metric is suspect
+          ;  - It does not consider the span of the output
+          ;     For example - you could have two configurations:
+          ;       1.  2.5 +/- 0.1
+          ;       2.  2.499 +/- 0.01
+          ;    If the target was 2.5 - then the first would have lower
+          ;    loss but would not be preferred.
+          val loss = abs(typ-value(v-out(cxt)) - typ-value(vo))
+          One(Ratio(rh, rl, loss))
+        else :
+          None()
+
+doc: \<DOC>
+Compute the output voltage range as a Toleranced based on resistor features.
+
+@param v-in Input Voltage as specified to the solver
+@param r-lo-val Nominal value (without precision) of the bottom resistor in the divider.
+@param r-hi-val Nominal value (without precision) of the top resistor in the divider
+@param lo-tol Toleranced with nominal value of 1.0 that represents the deviation from nominal for
+both the `lo` resistor value. This value multiplied by the nominal gives the range of resistance
+values for the `lo` resistor.
+@param hi-tol Toleranced with nominal value of 1.0 that represents the deviation from nominal for
+both the `hi` resistor value. This value multiplied by the nominal gives the range of resistance
+values for the `hi` resistor.
+@param lo-dr Delta-Resistance as a Toleranced with a nominal value of 1.0. This value when multiplied
+against the nominal `lo` resistance value gives the range of resistances expected for the operating
+temperature range.
+@param hi-dr Delta-Resistance as a Toleranced with a nominal value of 1.0. This value when multiplied
+against the nominal `hi` resistance value gives the range of resistances expected for the operating
+temperature range.
+<DOC>
+public defn compute-output-voltage-range (
+  v-in:Toleranced,
+  r-lo-val:Toleranced,
+  r-hi-val:Toleranced,
+  lo-dr:Toleranced = tol(1.0),
+  hi-dr:Toleranced = tol(1.0)
+  ) -> Toleranced :
+
+  val r-lo = r-lo-val * lo-dr
+  val r-hi = r-hi-val * hi-dr
+
+  val vout = v-in * r-lo / (r-lo + r-hi)
+  ; println("Computed: r-lo=%_ r-hi=%_ vin=%_ -- vout = %_" % [r-lo, r-hi, v-in, vout])
+  vout
+
+doc: \<DOC>
+Query for Resistance Values within the specified precision range
+
+This is a limited query that only returns distinct resistance values
+in the range we are inspecting.
+
+@param cxt Voltage Divider Constraints and Parameters. This provides the
+base query settings.
+@param goal-r Goal resistance value in ohms
+@param r-prec Target Precision family - ie (1 %) or (5 %), etc.
+@param min-prec Precision family from which to create a range so we don't
+query for just a single value. This is primarily for pragmatic search efficiency
+
+@return Set of resistance values for the components that meet the defined specs.
+<DOC>
+defn query-resistance-by-values (cxt:VoltageDividerConstraints, goal-r:Double, r-prec:Percentage, min-prec:Percentage) -> Tuple<Double> :
+  val R = goal-r +/- min-prec
+  ; println("query-by-value: r=%_ prec=%_" % [R, r-prec])
+  val j-objs = search-resistors(
+    base-query(cxt)
+    resistance = R,
+    precision = r-prec
+    exist! = ExistKeys(tcr_pos = true, tcr_neg = true),
+    distinct! = DistinctKey(resistance = true)
+  )
+  to-tuple $ for j-obj in j-objs seq:
+    j-obj as Double
+
+doc: \<DOC>
+Query for resistors matching a particular target resistance and precision.
+@param cxt Voltage Divider Constraints and Parameters. This provides the
+base query settings.
+@param target Target Resistance Value for constructing the query.
+@param prec Precision series for the resistors that we wish to query for.
+@return Set of resistors required by the query - limited to `query-limit(cxt)`. This
+returns the full data listing for each resistors so that we can do more analysis.
+<DOC>
+defn query-resistors (cxt:VoltageDividerConstraints, target: Double, prec:Percentage) -> Tuple<Resistor> :
+  val j-objs = search-resistors(
+    base-query(cxt)
+    resistance = target
+    precision = prec
+    exist! = ExistKeys(tcr_pos = true, tcr_neg = true),
+    limit = query-limit(cxt)
+  )
+  to-tuple $ for j-obj in j-objs seq:
+    parse-component(j-obj as JObject) as Resistor
+
+doc: \<DOC>
+Compute the TCR deviations for the temperature extrema
+@param r Resistor component object
+@param temp Temperature range for evaluating the TCR.
+<DOC>
+defn compute-tcrs (r:Resistor, temp:Toleranced) -> Tuple<Toleranced|False> :
+  to-tuple $ for func in [min-value, max-value] seq:
+    compute-tcr-deviation(r, func(temp))
+
+doc: \<DOC>
+Compute the voltage divider expected output over a temperature range.
+@param v-in Specified Input Voltage Range
+@param r-hi High side divider resistor from query results
+@param r-lo Low side divider resistor from query results
+@param temp-range Temperature range extrema that we will compute.
+@return Tuple of [MinTemp-Vout, MaxTemp-Vout]. These are the extrema points
+of the voltage divider output based on `temp-range`
+<DOC>
+defn study-solution (v-in: Toleranced, r-hi: Resistor, r-lo: Resistor, temp-range:Toleranced) -> Tuple<Toleranced>:
+  val lo-drs = compute-tcrs(r-lo, temp-range)
+  ; println("Lo-DRS: %_" % [lo-drs])
+  val hi-drs = compute-tcrs(r-hi, temp-range)
+
+  val r-lo-val = get-resistance(r-lo)
+  val r-hi-val = get-resistance(r-hi)
+
+  to-tuple $ for (lo-dr? in lo-drs, hi-dr? in hi-drs) seq:
+    match(lo-dr?, hi-dr?):
+      (lo-dr:Toleranced, hi-dr:Toleranced):
+        compute-output-voltage-range(v-in, r-lo-val, r-hi-val, lo-dr, hi-dr)
+      (lo-dr, hi-dr):
+        throw $ ValueError("No TCR Data")
+

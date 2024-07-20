@@ -1,0 +1,86 @@
+#use-added-syntax(jitx,tests)
+defpackage voltage-divider/tests/basic:
+  import core
+  import jitx with :
+    prefix(Resistor) => EModel-
+    prefix(Capacitor) => EModel-
+    prefix(Inductor) => EModel-
+
+  import jitx/commands
+  import jitx/parts/query-api
+  import jitx/parts/legacy-ocdb-structures
+
+  import jsl/design/settings
+
+  import voltage-divider/solver
+
+public defn expect-throw (f) -> Maybe<String>:
+  val res = try :
+    val unexpected = f()
+    None()
+  catch (e:Exception) :
+    val msg = to-string("%~" % [e])
+    One(msg)
+  #EXPECT(res is-not None)
+  res
+
+deftest(solver) test-basic-solver:
+
+  OPERATING-TEMPERATURE = min-max(-20.0, 50.0)
+  val exp-vout = 2.5 +/- (5 %)
+  val cxt = VoltageDividerConstraints(
+    v-in = 10.0 +/- (1 %),
+    v-out = exp-vout
+    current = 50.0e-6,
+    ; prec-series = [(2 %), (1 %), (0.5 %)]
+    base-query = ResistorQuery(
+      mounting = "smd"
+      min-stock = 10,
+      case = ["0603"]
+    )
+  )
+
+  val result = solve(cxt)
+  ; println("VOUT: %_" % [vo(result)])
+  ; println("R1: %_" % [resistance $ r1(result)])
+  ; println("R2: %_" % [resistance $ r2(result)])
+
+
+  #EXPECT( in-range?(exp-vout, vo(result)))
+
+  ; CHECK:
+  ;  R1 & R2 are within 10% of 150k and 50k
+
+deftest(solver) test-fail-case-1:
+
+  val cxt = VoltageDividerConstraints(
+    v-in = 10.0 +/- (1 %),
+    v-out = 12.5 +/- (1 %),
+    current = 50.0e-6,
+    base-query = ResistorQuery(
+      mounting = "smd"
+      min-stock = 10,
+      case = ["0603"]
+    )
+  )
+
+  val msg = expect-throw({solve(cxt)})
+  ; println("MSG: %_" % [msg])
+  #EXPECT(index-of-chars(value!(msg), "No Precision Series can satisfy") is-not False)
+
+deftest(solver) test-fail-case-2:
+
+  val cxt = VoltageDividerConstraints(
+    v-in = 10.0 +/- (10 %),
+    v-out = 2.5 +/- (0.1 %),
+    current = 50.0e-6,
+    base-query = ResistorQuery(
+      mounting = "smd"
+      min-stock = 10,
+      case = ["0603"]
+    )
+  )
+
+  val msg = expect-throw({solve(cxt)})
+  ; println("MSG: %_" % [msg])
+  #EXPECT(index-of-chars(value!(msg), "No Precision Series can satisfy") is-not False)

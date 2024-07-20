@@ -1,0 +1,14 @@
+defpackage voltage-divider/errors:
+  import core
+
+doc: \<DOC>
+No Solution Found Error
+
+This error is thrown when a solution for the voltage divider
+cannot be found.
+<DOC>
+public defstruct NoSolutionFoundError <: Exception:
+  msg:String
+
+defmethod print (o:OutputStream, e:NoSolutionFoundError):
+  print(o, "Failed to find a voltage divider solution that meets the provided requirements: %_" % [msg(e)])
