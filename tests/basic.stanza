@@ -14,6 +14,7 @@ defpackage voltage-divider/tests/basic:
 
   import voltage-divider/constraints
   import voltage-divider/solver
+  import voltage-divider/inverse
 
 public defn expect-throw (f) -> Maybe<String>:
   val res = try :
@@ -85,3 +86,27 @@ deftest(solver) test-fail-case-2:
   val msg = expect-throw({solve(cxt)})
   ; println("MSG: %_" % [msg])
   #EXPECT(index-of-chars(value!(msg), "No Precision Series can satisfy") is-not False)
+
+
+deftest(solver) test-inverse-divider :
+
+  OPERATING-TEMPERATURE = min-max(-20.0, 50.0)
+  val exp-vout = 3.3 +/- (2 %)
+  val cxt = InverseDividerConstraints(
+    v-in = min-typ-max(0.788, 0.8, 0.812),
+    v-out = exp-vout
+    current = 50.0e-6,
+    base-query = ResistorQuery(
+      mounting = "smd"
+      min-stock = 10,
+      case = ["0402"]
+    )
+  )
+
+  val result = solve(cxt)
+  println("VOUT: %_" % [vo(result)])
+  println("R1: %_" % [resistance $ r1(result)])
+  println("R2: %_" % [resistance $ r2(result)])
+
+
+  #EXPECT( in-range?(exp-vout, vo(result)))
