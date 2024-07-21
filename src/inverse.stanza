@@ -6,10 +6,10 @@ defpackage voltage-divider/inverse:
   import jitx/parts/query-api
 
   import jsl/ensure
-  import jsl/errors
   import jsl/design/settings
 
   import voltage-divider/constraints
+  import voltage-divider/utils
 
 doc: \<DOC>
 Inverse Voltage Divider Constraints

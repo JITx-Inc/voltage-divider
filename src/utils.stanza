@@ -1,0 +1,38 @@
+#use-added-syntax(jitx)
+defpackage voltage-divider/utils:
+  import core
+  import jitx
+
+  import jsl/errors
+
+doc: \<DOC>
+Standard Precision Values
+
+This is the default set of precisions that will
+be searched to satisfy a set of voltage divider constraints
+<DOC>
+public val std-precs = [(20 %), (10 %), (5 %), (2 %), (1 %), (0.5 %), (0.25 %), (0.1 %)]
+
+doc: \<DOC>
+Default Value for {@link min-sources}
+<DOC>
+public val DEF_MIN_SRCS = 3
+doc: \<DOC>
+Default Value for {@link query-limit}
+<DOC>
+public val DEF_QUERY_LIMIT = 50
+doc: \<DOC>
+Default Value for {@link search-range}
+<DOC>
+public val DEF_SEARCH_RANGE = (10 %)
+
+doc: \<DOC>
+Check for a proper relationships between `min-sources` and `query-limit`
+
+@throws ValueError If the `min-sources` > `query-limit`
+<DOC>
+public defn ensure-sources-limits (min-sources:Int, query-limit:Int):
+  if min-sources > query-limit:
+    throw $ ValueError(
+      "Min Sources must be less than Query Limit: min-sources=%_ query-limit=%_" % [min-sources, query-limit]
+    )

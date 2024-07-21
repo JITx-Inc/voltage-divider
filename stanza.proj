@@ -1,6 +1,7 @@
 include? ".slm/stanza.proj"
 pkg-cache: ".slm/pkg-cache"
 
+package voltage-divider defined-in "voltage-divider.stanza"
 packages voltage-divider/* defined-in "src/"
 packages voltage-divider/tests/* defined-in "tests/"
 
