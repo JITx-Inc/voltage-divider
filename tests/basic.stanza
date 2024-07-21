@@ -12,6 +12,7 @@ defpackage voltage-divider/tests/basic:
 
   import jsl/design/settings
 
+  import voltage-divider/constraints
   import voltage-divider/solver
 
 public defn expect-throw (f) -> Maybe<String>:

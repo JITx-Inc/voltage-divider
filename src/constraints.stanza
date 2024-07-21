@@ -1,0 +1,293 @@
+#use-added-syntax(jitx)
+defpackage voltage-divider/constraints:
+  import core
+  import collections
+  import jitx
+  import jitx/parts/query-api
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/design/settings
+
+doc: \<DOC>
+Standard Precision Values
+
+This is the default set of precisions that will
+be searched to satisfy a set of voltage divider constraints
+<DOC>
+public val std-precs = [(20 %), (10 %), (5 %), (2 %), (1 %), (0.5 %), (0.25 %), (0.1 %)]
+
+public val DEF_MIN_SRCS = 3
+public val DEF_QUERY_LIMIT = 50
+public val DEF_SEARCH_RANGE = (10 %)
+
+
+doc: \<DOC>
+Voltage Divider Constraints
+
+This type encapsulates the necessary parameters for the
+solver as well as other logistics parameters for the generated result.
+
+This type solves the "forward" voltage divider problem. Meaning that the
+input voltage is the `hi` side of the voltage divider and the objective
+voltage we are solving for is the middle node of the voltage divider (`out`).
+
+This type of solve might be used when building an attenuator where we want
+to keep the output within some toleranced range.
+<DOC>
+public defstruct VoltageDividerConstraints:
+  doc: \<DOC>
+  Input Voltage Range
+  This parameter encodes the typical DC voltage
+  range for the input.
+  <DOC>
+  v-in:Toleranced
+  doc: \<DOC>
+  Desired Voltage Output Range
+  Construct a voltage divider such that the specified
+  input voltage results in a output voltage in this range.
+  <DOC>
+  v-out:Toleranced
+  doc: \<DOC>
+  Max current in amps allowed through the divider
+  <DOC>
+  current:Double with:
+    ensure => ensure-positive!
+
+  doc: \<DOC>
+  Set of precision series to search
+  By default, we search the following series:
+    [(20 %), (10 %), (5 %), (2 %), (1 %), (0.5 %), (0.25 %), (0.1 %)]
+  The user can customize this series by pass an overriding series.
+  <DOC>
+  prec-series:Tuple<Percentage> with:
+    default => std-precs
+
+  doc: \<DOC>
+  Set the search range for components to select
+  This algorithm does a pre-screening of resistor values based on
+  the `v-in`, `v-out`, and `current` parameters. Then this
+  parameter limits how far from these pre-screen values we're willing
+  to search to find an acceptable solution.
+  <DOC>
+  search-range:Percentage with:
+    ensure => ensure-positive!
+    default => DEF_SEARCH_RANGE
+  doc: \<DOC>
+  Set the minimum number of sources
+
+  When pulling resistors from the database, this algorithm will
+  limit the selection of resistors to only those components
+  for which there are at least `min-sources` number of manufacturers
+  for comparable parts.
+  By default this value is 3.
+  <DOC>
+  min-sources:Int with:
+    ensure => ensure-positive!
+    default => DEF_MIN_SRCS
+  doc: \<DOC>
+  Query Limiter for Results
+
+  For many resistors, there may be 1000's of parts that
+  match a particular query. This parameter limits the
+  number of returned results to some max so as not to
+  overload the parts database. The default value is 50.
+  This value must be greater than the `min-sources`
+  parameter.
+  <DOC>
+  query-limit:Int with:
+    ensure => ensure-positive!
+    default => DEF_QUERY_LIMIT
+
+  doc: \<DOC>
+  Temperature Range for TCR evaluation.
+  By default this value will use the `OPERATING-TEMPERATURE`
+  specified in the JSL design settings.
+  <DOC>
+  temp-range:Toleranced with:
+    default => OPERATING-TEMPERATURE
+  doc: \<DOC>
+  Base ResistorQuery
+
+  This object allows the user to further fine tune the
+  selected resistors as part of the solver. The global
+  design level defaults will still apply but this can
+  be used to override or add to the query parameters.
+  Avoid specifying the `resistance`, `tolerance`, or
+  `precision` values in this base query builder.
+  <DOC>
+  base-query:ResistorQuery with:
+    default => ResistorQuery()
+with:
+  constructor => #VoltageDividerConstraints
+
+doc: \<DOC>
+Check for a proper relationships between `min-sources` and `query-limit`
+
+@throws ValueError If the `min-sources` > `query-limit`
+<DOC>
+public defn ensure-sources-limits (min-sources:Int, query-limit:Int):
+  if min-sources > query-limit:
+    throw $ ValueError(
+      "Min Sources must be less than Query Limit: min-sources=%_ query-limit=%_" % [min-sources, query-limit]
+    )
+
+doc: \<DOC>
+Constructor for the Voltage Divider Constraints
+
+@param v-in Input voltage to the divider (at `hi` port)
+@param v-out Desired output voltage at the `out` node.
+@param current Nominal current through the divider in Amps
+<DOC>
+public defn VoltageDividerConstraints (
+  --
+  v-in:Toleranced,
+  v-out:Toleranced,
+  current:Double,
+  prec-series:Collection<Percentage> = std-precs,
+  search-range:Percentage = DEF_SEARCH_RANGE
+  min-sources:Int = DEF_MIN_SRCS,
+  query-limit:Int = DEF_QUERY_LIMIT
+  temp-range:Toleranced = OPERATING-TEMPERATURE
+  base-query:ResistorQuery = ResistorQuery()
+  ) -> VoltageDividerConstraints:
+
+  val series = to-vector<Percentage>(prec-series)
+  qsort!(series)
+  ; Sort in Descending order
+  reverse!(series)
+
+  ensure-sources-limits(min-sources, query-limit)
+
+  #VoltageDividerConstraints(
+    v-in, v-out, current,
+    to-tuple(series), search-range, min-sources, query-limit,
+    temp-range, base-query
+  )
+
+
+
+doc: \<DOC>
+Compute the output objective voltage range as a Toleranced based on resistor features.
+
+This function is expected to be implemented by derived `VoltageDividerConstraints` object.
+This function is compute the objective of the solver and must match with the
+implementations of `is-compliant?` and `compute-loss`.
+
+@param cxt Self
+@param rh The top resistor in the divider.
+@param rl The bottom resistor in the divider.
+@param hi-dr Delta-Resistance as a Toleranced with a nominal value of 1.0. This value when multiplied
+against the nominal `hi` resistance value gives the range of resistances expected for the operating
+temperature range. The implementation will typically define a default of `typ(1.0)`.
+@param lo-dr Delta-Resistance as a Toleranced with a nominal value of 1.0. This value when multiplied
+against the nominal `lo` resistance value gives the range of resistances expected for the operating
+temperature range. The implementation will typically define a default of `typ(1.0)`.
+<DOC>
+public defmulti compute-objective (
+  cxt:VoltageDividerConstraints,
+  rh:Toleranced,
+  rl:Toleranced,
+  lo-dr:Toleranced = ?,
+  hi-dr:Toleranced = ?
+  ) -> Toleranced
+
+doc: \<DOC>
+Default `compute-objective`
+
+This function currently computes the objective as the forward voltage of the
+voltage divider. Meaning the middle node of the divider is the output.
+
+```
+Vobj = V-in * (R-L / (R-H + R-L))
+```
+
+<DOC>
+public defmethod compute-objective (
+  cxt:VoltageDividerConstraints,
+  rh:Toleranced,
+  rl:Toleranced,
+  hi-dr:Toleranced = tol(1.0)
+  lo-dr:Toleranced = tol(1.0),
+  ) -> Toleranced:
+  val r-hi = rh * hi-dr
+  val r-lo = rl * lo-dr
+
+  val vout = v-in(cxt) * r-lo / (r-lo + r-hi)
+  ; println("Computed: r-lo=%_ r-hi=%_ vin=%_ -- vout = %_" % [r-lo, r-hi, v-in(cxt), vout])
+  vout
+
+doc: \<DOC>
+Check if the computed objective voltage is within the user-defined constraints
+
+This function must be consistent with the `compute-objective` and `compute-loss`
+
+@param cxt Self
+@param vout Output Objective of the solver. This may be the input or output voltage
+depending on how the solver is being used.
+<DOC>
+public defmulti is-compliant? (cxt:VoltageDividerConstraints, v-obj:Toleranced|Double) -> True|False
+
+public defmethod is-compliant? (cxt:VoltageDividerConstraints, v-obj:Toleranced|Double) -> True|False :
+  in-range?(v-out(cxt), v-obj)
+
+
+doc: \<DOC>
+Compute a loss function for a potential solution.
+
+This function is expected to compute a positive value indicating
+how much error this particular R-hi and R-lo combination will contribute
+to the resulting objective solution.
+
+@return Positive value if not None(). A value closer to 0 indicates that the solution is better. A value of
+0.0 indicates a perfect solution.
+If None() this an indication that the provided ratio is not a solution and should not be considered
+<DOC>
+public defmulti compute-loss (cxt:VoltageDividerConstraints, rh:Double, rl:Double, precision:Percentage) -> Maybe<Double>
+
+doc: \<DOC>
+Default Implementation for `compute-loss`.
+
+The default implementation only considers how close the nominal voltage of the bridge
+is to the desired nominal v-out.
+
+It does not consider the TCR adjusted values for the divider.
+<DOC>
+public defmethod compute-loss (cxt:VoltageDividerConstraints, rh:Double, rl:Double, precision:Percentage) -> Maybe<Double>:
+  val vo = compute-objective(cxt,
+    rh +/- precision
+    rl +/- precision,
+  )
+  if is-compliant?(cxt, vo):
+    ; This metric is suspect
+    ;  - It does not consider the span of the output
+    ;     For example - you could have two configurations:
+    ;       1.  2.5 +/- 0.1
+    ;       2.  2.499 +/- 0.01
+    ;    If the target was 2.5 - then the first would have lower
+    ;    loss but would not be preferred.
+    One $ abs(typ-value(v-out(cxt)) - typ-value(vo))
+  else :
+    None()
+
+doc: \<DOC>
+Compute an initial guess for the voltage divider solution
+
+These values will be the center point of our search space which will be
+expanded by {@link search-range}.
+
+@return Tuple of two resistance values `[high, low]` where `high` is the top
+resistor in the divider and `low` is the bottom resistor in the bridge.
+<DOC>
+public defmulti compute-initial-guess (cxt:VoltageDividerConstraints) -> [Double, Double]
+
+doc: \<DOC>
+Default Implementation of the initial guess.
+
+This function assumes we are computing an forward divider voltage for `v-in` and `v-out`
+<DOC>
+public defmethod compute-initial-guess (cxt:VoltageDividerConstraints) -> [Double, Double]:
+  val r-hi = (typ(v-in(cxt)) - typ(v-out(cxt))) / current(cxt)
+  val r-lo = typ(v-out(cxt)) / current(cxt)
+  [r-hi, r-lo]
+
