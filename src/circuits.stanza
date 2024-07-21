@@ -2,7 +2,12 @@
 defpackage voltage-divider/circuits:
   import core
   import jitx
+  import jitx/commands
 
+  import jitx/parts/legacy-ocdb-structures
+
+  import voltage-divider/constraints
+  import voltage-divider/inverse
   import voltage-divider/solver
 
 
@@ -25,6 +30,7 @@ public defn voltage-divider (sol:VoltageDividerSolution -- name?:Maybe<String> =
     match(name?):
       (given:One<String>):
         name = value(given)
+      (_:None): false
 
     port hi : pin
     port out : pin
@@ -40,12 +46,54 @@ public defn voltage-divider (sol:VoltageDividerSolution -- name?:Maybe<String> =
   vdiv
 
 
+doc: \<DOC>
+Construct a voltage divider module with forward model.
+
+This module will attempt to compute a solution for a forward voltage divider
+circuit based on the input and output specifications.
+
+@param cxt Voltage divider constraints type
+@param name? Optional name for this module.
+
+@throws NoSolutionFoundError If not solution can be found.
+
+@member hi High side of the voltage divider (The "input" for the solver)
+@member out Middle point of the voltage divider (The "output" for the solver)
+@member lo Low side (ground) of the voltage divider
+
+<DOC>
+public defn voltage-divider (cxt:VoltageDividerConstraints -- name?:Maybe<String> = None()) -> Instantiable:
+  val sol = solve(cxt)
+  voltage-divider(sol, name? = name?)
+
 
 doc: \<DOC>
-Construct a voltage divider module
+Construct a voltage divider module with inverse model
 
-This module will attempt to compute a solution for a voltage divider
-circuit based on the input and output specifications.
+This module will attempt to compute a solution for the inverse voltage divider
+circuit based on the input/output specifications
+
+@param cxt Voltage divider constraints type
+@param name? Optional name for this module.
+
+@throws NoSolutionFoundError If not solution can be found.
+
+@member hi High side of the voltage divider (The "output" for the solver)
+@member out Middle point of the voltage divider (The "input" for the solver)
+@member lo Low side (ground) of the voltage divider
+
+<DOC>
+public defn voltage-divider (cxt:InverseDividerConstraints -- name?:Maybe<String> = None()) -> Instantiable:
+  val sol = solve(cxt)
+  voltage-divider(sol, name? = name?)
+
+
+doc: \<DOC>
+Construct a forward voltage divider module
+
+This module will attempt to compute a solution for a forward voltage divider
+problem and then construct a voltage divider circuit based on the input and
+output specifications.
 
 @param v-in Voltage input constraint
 @param v-out Desired output voltage for the divider network.
@@ -55,7 +103,7 @@ from `hi` to `lo`.
 
 @throws NoSolutionFoundError If not solution can be found.
 <DOC>
-public defn voltage-divider (
+public defn forward-divider (
   --
   v-in:Toleranced
   v-out:Toleranced
@@ -67,20 +115,36 @@ public defn voltage-divider (
     v-out = v-out,
     current = current
   )
-  voltage-divider(cxt, name? = name?)
+  val sol = solve(cxt)
+  voltage-divider(sol, name? = name?)
+
 
 doc: \<DOC>
-Construct a voltage divider module
+Construct a forward voltage divider module
 
-This module will attempt to compute a solution for a voltage divider
-circuit based on the input and output specifications.
+This module will attempt to compute a solution for a forward voltage divider
+problem and then construct a voltage divider circuit based on the input and
+output specifications.
 
-@param cxt Voltage divider constraints type
+@param v-in Voltage input constraint to the `out` pin of the divider
+@param v-out Desired objective is the `hi` pin voltage of the divider.
+@param current Nominal current through the resistive divider network
+from `hi` to `lo`.
 @param name? Optional name for this module.
 
 @throws NoSolutionFoundError If not solution can be found.
 <DOC>
-public defn voltage-divider (cxt:VoltageDividerConstraints -- name?:Maybe<String> = None()) -> Instantiable:
+public defn inverse-divider (
+  --
+  v-in:Toleranced
+  v-out:Toleranced
+  current:Double,
+  name?:Maybe<String> = None()
+  ) -> Instantiable:
+  val cxt = InverseDividerConstraints(
+    v-in = v-in,
+    v-out = v-out,
+    current = current
+  )
   val sol = solve(cxt)
-  voltage-divider(sol, name?)
-
+  voltage-divider(sol, name? = name?)
