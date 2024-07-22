@@ -127,6 +127,7 @@ public defstruct InverseDividerConstraints <: VoltageDividerConstraints:
 
 with:
   constructor => #InverseDividerConstraints
+  printer => true
 
 
 doc: \<DOC>

@@ -108,6 +108,7 @@ public defstruct VoltageDividerConstraints:
     default => ResistorQuery()
 with:
   constructor => #VoltageDividerConstraints
+  printer => true
 
 doc: \<DOC>
 Constructor for the Voltage Divider Constraints
