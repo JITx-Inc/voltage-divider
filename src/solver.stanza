@@ -61,7 +61,7 @@ defstruct Ratio :
   Loss Metric Used for Sorting which `Ratio` values to use in ultimate solution.
   <DOC>
   loss: Double with:
-    ensure => ensure-positive!
+    ensure => ensure-non-negative!
 
 doc: \<DOC>
 Solve the Voltage Divider Constraint Problem
