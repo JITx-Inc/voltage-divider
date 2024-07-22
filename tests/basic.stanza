@@ -41,15 +41,16 @@ deftest(solver) test-basic-solver:
   )
 
   val result = solve(cxt)
-  ; println("VOUT: %_" % [vo(result)])
-  ; println("R1: %_" % [resistance $ r1(result)])
-  ; println("R2: %_" % [resistance $ r2(result)])
+  ; println("VOUT:   %_" % [vo(result)])
+  ; println("R-high: %_" % [resistance $ R-h(result)])
+  ; println("R-low:  %_" % [resistance $ R-l(result)])
 
 
   #EXPECT( in-range?(exp-vout, vo(result)))
 
-  ; CHECK:
-  ;  R1 & R2 are within 10% of 150k and 50k
+  #EXPECT( in-range?(165.0e3 +/- 10.0e3, resistance $ R-h(result)))
+  #EXPECT( in-range?(55.0e3 +/- 10.0e3, resistance $ R-l(result)))
+
 
 deftest(solver) test-fail-case-1:
 
@@ -120,9 +121,12 @@ deftest(solver) test-inverse-divider :
   )
 
   val result = solve(cxt)
-  println("VOUT: %_" % [vo(result)])
-  println("R1: %_" % [resistance $ r1(result)])
-  println("R2: %_" % [resistance $ r2(result)])
+  ; println("VOUT:   %_" % [vo(result)])
+  ; println("R-high: %_" % [resistance $ R-h(result)])
+  ; println("R-low:  %_" % [resistance $ R-l(result)])
 
 
   #EXPECT( in-range?(exp-vout, vo(result)))
+
+  #EXPECT( in-range?(45.0e3 +/- 10.0e3, resistance $ R-h(result)))
+  #EXPECT( in-range?(14.0e3 +/- 5.0e3, resistance $ R-l(result)))

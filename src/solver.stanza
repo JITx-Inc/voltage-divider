@@ -26,11 +26,11 @@ public defstruct VoltageDividerSolution :
   doc: \<DOC>
   High Resistor in the voltage divider circuit configuration
   <DOC>
-  r1: Resistor
+  R-h: Resistor
   doc: \<DOC>
   Low Resistor in the voltage divider circuit configuration
   <DOC>
-  r2: Resistor
+  R-l: Resistor
   doc: \<DOC>
   Output Voltage Range
   This voltage is computed over the precision and the variation
@@ -180,7 +180,7 @@ defn filter-query-results (
   ratio:Ratio,
   precision:Percentage
   ) -> Maybe<VoltageDividerSolution> :
-  println("    - Querying resistors for R1=%_Ω R2=%_Ω" % [high(ratio), low(ratio)])
+  println("    - Querying resistors for R-h=%_Ω R-l=%_Ω" % [high(ratio), low(ratio)])
   val r-his = query-resistors(cxt, high(ratio), precision)
   val r-los = query-resistors(cxt, low(ratio), precision)
 

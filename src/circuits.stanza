@@ -36,8 +36,8 @@ public defn voltage-divider (sol:VoltageDividerSolution -- name?:Maybe<String> =
     port out : pin
     port lo : pin
 
-    public inst r-hi : to-jitx(r1(sol))
-    public inst r-lo : to-jitx(r2(sol))
+    public inst r-hi : to-jitx(R-h(sol))
+    public inst r-lo : to-jitx(R-l(sol))
     net (r-hi.p[1], hi)
     net (r-lo.p[1], r-hi.p[2] out)
     net (r-lo.p[2], lo)
