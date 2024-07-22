@@ -66,7 +66,7 @@ deftest(solver) test-fail-case-1:
 
   val msg = expect-throw({solve(cxt)})
   ; println("MSG: %_" % [msg])
-  #EXPECT(index-of-chars(value!(msg), "No Precision Series can satisfy") is-not False)
+  #EXPECT(index-of-chars(value!(msg), "Incompatible V-in and V-out") is-not False)
 
 deftest(solver) test-fail-case-2:
 
@@ -83,7 +83,25 @@ deftest(solver) test-fail-case-2:
 
   val msg = expect-throw({solve(cxt)})
   ; println("MSG: %_" % [msg])
-  #EXPECT(index-of-chars(value!(msg), "No Precision Series can satisfy") is-not False)
+  #EXPECT(index-of-chars(value!(msg), "V-in Range is too large") is-not False)
+
+deftest(solver) test-fail-case-3:
+
+  val cxt = VoltageDividerConstraints(
+    v-in = 10.0 +/- (1 %),
+    v-out = 2.5 +/- (5 %),
+    current = 50.0e-6,
+    prec-series = [(20 %), (10 %), (5 %)]
+    base-query = ResistorQuery(
+      mounting = "smd"
+      min-stock = 10,
+      case = ["0603"]
+    )
+  )
+
+  val msg = expect-throw({solve(cxt)})
+  ; println("MSG: %_" % [msg])
+  #EXPECT(index-of-chars(value!(msg), "No Precision Series can meet") is-not False)
 
 
 deftest(solver) test-inverse-divider :

@@ -92,23 +92,45 @@ public defn solve (cxt:VoltageDividerConstraints) -> VoltageDividerSolution :
   ;  search distance.
   val search-prec = search-range(cxt)
 
-  val [goal-r-hi, goal-r-lo] = compute-initial-guess(cxt)
+  val goals = compute-initial-guess(cxt)
+
+  for g in goals do:
+    if g < 0.0:
+      throw $ IncompatibleVinVoutError(v-in(cxt), v-out(cxt))
+
+  val [goal-r-hi, goal-r-lo] = goals
+
+  ; Screen the input voltage requirement with perfect resistors
+  ;  This will tell us if the voltage divider is not possible to
+  ;  create before expending any other time.
+  val vin-screen = compute-objective(cxt, goal-r-hi +/- 0.0, goal-r-lo +/- 0.0)
+  if not is-compliant?(cxt, vin-screen):
+    throw $ VinRangeTooLargeError(goals, vin-screen)
 
   ; Run an initial filter on precision series to remove any
   ;  precision values that will obviously not work.
+
   ; NOTE - `prec-series` is expected to be sorted in
   ;  descending order
-  val first-valid-series = for std-prec in prec-series(cxt) index-when :
+
+  val pre-screen = to-tuple $ for std-prec in prec-series(cxt) seq :
     val vo = compute-objective(cxt,
         goal-r-hi +/- std-prec
         goal-r-lo +/- std-prec
       )
-    is-compliant?(cxt, vo)
+    [is-compliant?(cxt, vo), std-prec, vo]
+
+  val first-valid-series = for elem in pre-screen index-when :
+    val [compliant?, prec, vo] = elem
+    compliant?
 
   val series = match(first-valid-series:Int):
     prec-series(cxt)[first-valid-series to false]
   else:
-    throw $ NoSolutionFoundError("No Precision Series can satisfy initial constraints")
+    throw $ NoPrecisionSatisfiesConstraintsError(
+      goals,
+      pre-screen
+      )
 
   ; println("Valid Precision Series: %_" % [series])
   val sol? = for std-prec in series first:
