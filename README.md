@@ -19,13 +19,13 @@ Example:
 
   val result = solve(cxt)
   println("VOUT: %_" % [vo(result)])
-  println("R1: %_" % [resistance $ r1(result)])
-  println("R2: %_" % [resistance $ r2(result)])
+  println("R-high: %_" % [resistance $ R-h(result)])
+  println("R-low:  %_" % [resistance $ R-l(result)])
 
   ; Generates:
-  ; VOUT: Toleranced(2.40097398146147 <= 2.49658935879945 <= 2.59575288143456)
-  ; R1: 165000.0
-  ; R2: 54900.0
+  ; VOUT:   Toleranced(2.40097398146147 <= 2.49658935879945 <= 2.59575288143456)
+  ; R-high: 165000.0
+  ; R-low:  54900.0
 
 
 ```
@@ -35,11 +35,18 @@ To instantiate a voltage divider:
 ```
 pcb-module top-level:
 
+  val VoltageDividerConstraints(...)
   inst div : voltage-divider(cxt, name? = One("feedback-div"))
 
   ; or
 
-  inst div : voltage-divider(
+  val sol =  VoltageDividerSolution(...)
+  inst div : voltage-divider(sol, name? = One("feedback-div"))
+
+
+  ; or
+
+  inst div : forward-divider(
     v-in = 10.0 +/- (1 %),
     v-out = 2.5 +/- (5 %),
     current = 50.0e-6
@@ -47,3 +54,5 @@ pcb-module top-level:
 
 ```
 
+The `name?` argument is optional but useful when using multiple voltage
+dividers in a circuit.
