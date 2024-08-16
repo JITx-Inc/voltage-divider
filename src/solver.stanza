@@ -2,17 +2,11 @@
 defpackage voltage-divider/solver:
   import core
   import collections
-  import json
 
-  import jitx with :
-    prefix(Resistor) => EModel-
-    prefix(Capacitor) => EModel-
-    prefix(Inductor) => EModel-
+  import jitx
   import jitx/commands
 
-  import jitx/parts/query-api
-  import jitx/parts/legacy-ocdb-structures
-
+  import jitx/parts
   import jsl/ensure
   import jsl/errors
 
@@ -288,7 +282,7 @@ defn query-resistors (cxt:VoltageDividerConstraints, target: Double, prec:Percen
     limit = query-limit(cxt)
   )
   to-tuple $ for j-obj in j-objs seq:
-    parse-component(j-obj as JObject) as Resistor
+    to-component(j-obj) as Resistor
 
 doc: \<DOC>
 Compute the TCR deviations for the temperature extrema

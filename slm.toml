@@ -2,4 +2,4 @@ name = "voltage-divider"
 version = "0.1.0"
 [dependencies]
 # Uncomment to run the unit tests
-#JITX3 = { path = "{SLM_ROOT}/JITX3" }
+JITX3 = { path = "{SLM_ROOT}/JITX3" }
