@@ -4,7 +4,7 @@ defpackage voltage-divider/circuits:
   import jitx
   import jitx/commands
 
-  import jitx/parts
+  import jitx/parts/legacy-ocdb-structures
 
   import voltage-divider/constraints
   import voltage-divider/inverse

@@ -3,7 +3,7 @@ defpackage voltage-divider/inverse:
   import core
   import collections
   import jitx
-  import jitx/parts
+  import jitx/parts/query-api
 
   import jsl/ensure
   import jsl/design/settings

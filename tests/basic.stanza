@@ -1,9 +1,14 @@
 #use-added-syntax(jitx,tests)
 defpackage voltage-divider/tests/basic:
   import core
-  import jitx
+  import jitx with :
+    prefix(Resistor) => EModel-
+    prefix(Capacitor) => EModel-
+    prefix(Inductor) => EModel-
+
   import jitx/commands
-  import jitx/parts
+  import jitx/parts/query-api
+  import jitx/parts/legacy-ocdb-structures
 
   import jsl/design/settings
 
