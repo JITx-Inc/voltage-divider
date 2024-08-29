@@ -47,10 +47,11 @@ public defn voltage-divider (sol:VoltageDividerSolution -- name?:Maybe<String> =
 
 
 doc: \<DOC>
-Construct a voltage divider module with forward model.
+Construct a voltage divider module from a constraints model.
 
-This module will attempt to compute a solution for a forward voltage divider
-circuit based on the input and output specifications.
+This module will attempt to compute a solution for a voltage divider
+circuit based on the input and output specifications of the `constraint`
+model. Can be forward or inverse models.
 
 @param cxt Voltage divider constraints type
 @param name? Optional name for this module.
@@ -63,27 +64,6 @@ circuit based on the input and output specifications.
 
 <DOC>
 public defn voltage-divider (cxt:VoltageDividerConstraints -- name?:Maybe<String> = None()) -> Instantiable:
-  val sol = solve(cxt)
-  voltage-divider(sol, name? = name?)
-
-
-doc: \<DOC>
-Construct a voltage divider module with inverse model
-
-This module will attempt to compute a solution for the inverse voltage divider
-circuit based on the input/output specifications
-
-@param cxt Voltage divider constraints type
-@param name? Optional name for this module.
-
-@throws NoSolutionFoundError If not solution can be found.
-
-@member hi High side of the voltage divider (The "output" for the solver)
-@member out Middle point of the voltage divider (The "input" for the solver)
-@member lo Low side (ground) of the voltage divider
-
-<DOC>
-public defn voltage-divider (cxt:InverseDividerConstraints -- name?:Maybe<String> = None()) -> Instantiable:
   val sol = solve(cxt)
   voltage-divider(sol, name? = name?)
 
