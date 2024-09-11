@@ -1,4 +1,4 @@
 name = "voltage-divider"
-version = "0.1.0"
+version = "0.3.0"
 [dependencies]
 JITX3 = { path = "{SLM_ROOT}/JITX3" }
