@@ -184,7 +184,7 @@ defn filter-query-results (
 
     if length(r-his) < min-srcs or length(r-los) < min-srcs :
       println("      Ignoring: there must at least %_ resistors of each type" % [min-srcs])
-      None()
+      return(None())
 
     val r-hi-cmp = r-his[0]
     val r-lo-cmp = r-los[0]
@@ -204,7 +204,7 @@ defn filter-query-results (
 
       println("        min-temp: %_"% [fmt(vo-valids[0], vo-set[0])])
       println("        max-temp: %_" % [fmt(vo-valids[1], vo-set[1])])
-      None()
+      return(None())
 
     println("      Solved: mpn1=%_, mpn2=%_, v-out=(%,V), current=%_A"
             % [mpn(r-hi-cmp), mpn(r-lo-cmp), vo-set, typ-value(vo-set[0]) / low(ratio)])
