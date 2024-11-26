@@ -101,11 +101,14 @@ public defstruct VoltageDividerConstraints:
   selected resistors as part of the solver. The global
   design level defaults will still apply but this can
   be used to override or add to the query parameters.
-  Avoid specifying the `resistance`, `tolerance`, or
-  `precision` values in this base query builder.
+  The default value is `get-default-resistor-query()` which
+  can be set by the user at the top-level.
+  The `resistance`, `tolerance`, or `precision` keys
+  will be overridden by the solvers so any value
+  in the base query will be ignored for those keys.
   <DOC>
   base-query:ResistorQuery with:
-    default => ResistorQuery()
+    default => get-default-resistor-query()
 with:
   constructor => #VoltageDividerConstraints
   printer => true
@@ -127,7 +130,7 @@ public defn VoltageDividerConstraints (
   min-sources:Int = DEF_MIN_SRCS,
   query-limit:Int = DEF_QUERY_LIMIT
   temp-range:Toleranced = OPERATING-TEMPERATURE
-  base-query:ResistorQuery = ResistorQuery()
+  base-query:ResistorQuery = get-default-resistor-query()
   ) -> VoltageDividerConstraints:
 
   val series = to-vector<Percentage>(prec-series)
