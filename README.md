@@ -17,13 +17,13 @@ problem and then construct a voltage divider circuit based on the input and
 output specifications.
 
 ```
-  val cxt = VoltageDividerConstraints(
+  val cxt = voltage-divider/constraints/VoltageDividerConstraints(
     v-in = 10.0 +/- (1 %),
     v-out = 2.5 +/- (5 %),
     current = 50.0e-6,
     base-query = R-query
   )
-    val fb-div-type = voltage-divider(cxt)
+    val fb-div-type = voltage-divider/circuits/voltage-divider(cxt)
     public inst fb-div : fb-div-type
     net (fb-div.hi, vout-port)
     net (fb-div.out, IC.buck.feedback)
@@ -47,7 +47,7 @@ solver will then find the resistor combination with the right precision that
 keeps the LDO's output voltage in the objective range.
 
 ```
-    val fb-cst = InverseDividerConstraints(
+    val fb-cst = voltage-divider/constraints/InverseDividerConstraints(
       ; Input is the voltage reference of the
       ;   converter
       v-in = min-typ-max(0.438, 0.45, 0.462); the LDO datasheet reference voltage
@@ -56,7 +56,7 @@ keeps the LDO's output voltage in the objective range.
       base-query = R-query
     )
 
-    val fb-div-type = voltage-divider(fb-cst)
+    val fb-div-type = voltage-divider/circuits/voltage-divider(fb-cst)
     public inst fb-div : fb-div-type
     net (fb-div.hi, vout-port)
     net (fb-div.out, IC.buck.feedback)
