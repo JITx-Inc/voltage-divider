@@ -1,5 +1,12 @@
 # Voltage Divider
 
+# Installation
+
+In slm.toml add:
+```
+voltage-divider = { git = "JITx-Inc/voltage-divider", version = "0.5.0" }
+```
+
 This project contains an [slm](https://github.com/StanzaOrg/slm)-based library for solving,
 constructing, and instantiating resistive dividers in [JITX](https://www.jitx.com/).
 
