@@ -1,0 +1,153 @@
+[build-system]
+requires = [
+  "hatchling>=1.27.0,<2.0",
+  "hatch-vcs>=0.4.0,<0.5.0",
+  "hatch-sphinx==0.0.2",
+  "sphinx>=8.1.0,<9.0",
+  "sphinx_autodoc_typehints>=3.1.0,<4.0",
+  "myst-parser>=4.0.0",
+  "pydata-sphinx-theme==0.16.1",
+  "ruff==0.11.2",
+  "pyright>=1.1.398,<1.2.0",
+]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "voltage_divider"
+dynamic = ["version"]
+dependencies = [
+  #"jitxcore>=0.1.dev,<0.2.0",
+  #"websockets==15.0.1",
+  "ruff==0.11.2",
+  "pyright>=1.1.398,<1.2.0",
+  #"shapely>=2.1.0,<3.0",
+]
+requires-python = ">=3.12"
+authors = [
+  {name = "JITX"}
+]
+maintainers = [
+  {name = "JITX"}
+]
+description = "voltage-divider"
+keywords = ["jitx", "pcb", "voltage divider"]
+
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Framework :: Hatch",
+  "Framework :: Pytest",
+  "Intended Audience :: Developers",
+  "License :: Other/Proprietary License",
+  #"Operating System :: MacOS :: MacOS X",
+  #"Operating System :: Microsoft :: Windows :: Windows 10",
+  #"Operating System :: Microsoft :: Windows :: Windows 11",
+  "Operating System :: OS Independent",
+  #"Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python",
+  "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://jitx.com"
+Documentation = "https://docs.jitx.com"
+
+
+[tool]
+
+#[tool.hatch.envs.default.env-vars]
+#PIP_INDEX_URL = "https://pypi.jitx.com/jitx/unstable/+simple"
+
+#[tool.hatch.envs.hatch-test.env-vars]
+#PIP_INDEX_URL = "https://pypi.jitx.com/jitx/unstable/+simple"
+
+# tests: run "hatch test --cover"
+[tool.hatch.envs.test]
+dependencies = [
+  "coverage[toml]",
+  "pytest",
+  "pytest-cov",
+]
+
+[tool.hatch.envs.hatch-test]
+randomize = true
+parallel = false
+installer = "pip"
+extra-args = ["-vv"]
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.12", "3.13"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0+undefined"
+
+# formatting: run "hatch fmt --check"
+[tool.hatch.envs.hatch-static-analysis]
+dependencies = ["ruff==0.11.2"]
+config-path = "none"  # don't use hatch defaults
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "A", "B", "C"]
+# E501 line too long - let ruff format handle that
+# A002 variable shadowing built-in (id, min, max)
+# A005 builtin module shadowing (false positive)
+# C901 mccabe complexity check, limits to 10
+ignore = ["E501", "A005", "C901", "A002"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+#[tool.hatch.build.targets.wheel.hooks.sphinx]
+#dependencies = [
+#  "jitxcore>=0.1.dev,<0.2.0",
+#  "websockets==15.0.1"
+#]
+
+[[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
+tool = "apidoc"
+source = "../src"
+out_dir = "source/api/voltage-divider"
+depth = 4
+header = "JITX voltage-divider Documentation"
+
+[[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
+tool = "build"
+format = "html"
+source = "source"
+out_dir = "build"
+
+[[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
+tool = "custom"
+out_dir = "build"
+shell = true
+commands = [
+  "mkdir -p ../dist",
+  "pwd",
+  "ls -la",
+  "tar jcf ../dist/voltage_divider-docs-$(hatch version).tar.bz2 -C build ."
+]
+
+# pyright: run "hatch run types:check"
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "pyright>=1.1.0",
+]
+
+[tool.hatch.envs.types.scripts]
+check = "pyright ."
+stats = "pyright --stats ."
