@@ -55,6 +55,7 @@ def solve(constraints: VoltageDividerConstraints) -> VoltageDividerSolution:
         raise NoPrecisionSatisfiesConstraintsError(goals, pre_screen)
     # Try to solve for each valid precision
     for std_prec in series:
+        print(f"-> Precision {std_prec}%")
         sol = solve_over_series(constraints, std_prec, search_prec)
         if sol is not None:
             return sol
@@ -71,10 +72,12 @@ def solve_over_series(constraints: VoltageDividerConstraints, precision: float, 
     return None
 
 def filter_query_results(constraints: VoltageDividerConstraints, ratio: Ratio, precision: float) -> Optional[VoltageDividerSolution]:
+    print(f"    - Querying resistors for R-h={ratio.high}Ω R-l={ratio.low}Ω")
     r_his = query_resistors(constraints, ratio.high, precision)
     r_los = query_resistors(constraints, ratio.low, precision)
     min_srcs = constraints.min_sources
     if len(r_his) < min_srcs or len(r_los) < min_srcs:
+        print(f"      Ignoring: there must at least {min_srcs} resistors of each type")
         return None
     r_hi_cmp = r_his[0]
     r_lo_cmp = r_los[0]
@@ -82,9 +85,23 @@ def filter_query_results(constraints: VoltageDividerConstraints, ratio: Ratio, p
     vo_valids = [constraints.is_compliant(vo) for vo in vo_set]
     is_valid = all(vo_valids)
     if not is_valid:
+        print(f"      Ignoring: not a solution when taking into account TCRs.")
+        def fmt(ok, vo):
+            return "OK" if ok else f"FAIL ({vo} V)"
+        print(f"        min-temp: {fmt(vo_valids[0], vo_set[0])}")
+        print(f"        max-temp: {fmt(vo_valids[1], vo_set[1])}")
         return None
     # TODO: Compute the worst case v-out here and use that instead of just the first
     worst_case_vo = vo_set[0]
+    # Print solution found
+    mpn1 = getattr(r_hi_cmp, 'mpn', 'unknown')
+    mpn2 = getattr(r_lo_cmp, 'mpn', 'unknown')
+    vout_str = f"({vo_set[0]}, {vo_set[1]})V" if len(vo_set) > 1 else f"({vo_set[0]})V"
+    try:
+        current = vo_set[0].typ / ratio.low
+    except Exception:
+        current = 'unknown'
+    print(f"      Solved: mpn1={mpn1}, mpn2={mpn2}, v-out={vout_str}, current={current}A")
     return VoltageDividerSolution(r_hi_cmp, r_lo_cmp, worst_case_vo)
 
 def sort_pairs_by_best_fit(constraints: VoltageDividerConstraints, precision: float, hi_res: List[float], lo_res: List[float]) -> List[Ratio]:
