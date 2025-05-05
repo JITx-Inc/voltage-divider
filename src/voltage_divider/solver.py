@@ -143,8 +143,8 @@ def study_solution(constraints: VoltageDividerConstraints, r_hi: Resistor, r_lo:
         # Default to no temperature range
         temp_range = Toleranced(25.0, 0.0, 0.0)
     # Compute TCR deviations for min and max temperature
-    lo_drs = [compute_tcr_deviation(r_lo, temp_range.min_value()), compute_tcr_deviation(r_lo, temp_range.max_value())]
-    hi_drs = [compute_tcr_deviation(r_hi, temp_range.min_value()), compute_tcr_deviation(r_hi, temp_range.max_value())]
+    lo_drs = [compute_tcr_deviation(r_lo, temp_range.min_value), compute_tcr_deviation(r_lo, temp_range.max_value)]
+    hi_drs = [compute_tcr_deviation(r_hi, temp_range.min_value), compute_tcr_deviation(r_hi, temp_range.max_value)]
     r_lo_val = get_resistance(r_lo)
     r_hi_val = get_resistance(r_hi)
     results = []
