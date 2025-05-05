@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, Union, Callable
+from jitx_parts.interval import Interval
 import math
 
 # TODO: Implement or import Percentage type as needed
@@ -7,7 +8,7 @@ import math
 Percentage = float
 
 @dataclass(eq=True, frozen=True)
-class Toleranced:
+class Toleranced(Interval):
     """
     Interval Arithmetic Type for values with tolerances.
 
@@ -21,26 +22,28 @@ class Toleranced:
 
     def __str__(self):
         if self.tol_minus and self.tol_plus:
-            return f"Toleranced({self.min_value()} <= {self.typ} <= {self.max_value()})"
+            return f"Toleranced({self.min_value} <= {self.typ} <= {self.max_value})"
         elif self.tol_minus:
-            return f"Toleranced({self.min_value()} <= typ:{self.typ})"
+            return f"Toleranced({self.min_value} <= typ:{self.typ})"
         elif self.tol_plus:
-            return f"Toleranced(typ:{self.typ} <= {self.max_value()})"
+            return f"Toleranced(typ:{self.typ} <= {self.max_value})"
         else:
             return f"Toleranced({self.typ})"
 
+    @property
     def max_value(self) -> float:
         if self.tol_plus is not None:
             return self.typ + self.tol_plus
         raise ValueError("tol_plus must be specified to compute max_value")
 
+    @property
     def min_value(self) -> float:
         if self.tol_minus is not None:
             return self.typ - self.tol_minus
         raise ValueError("tol_minus must be specified to compute min_value")
 
     def center_value(self) -> float:
-        return self.min_value() + 0.5 * (self.max_value() - self.min_value())
+        return self.min_value + 0.5 * (self.max_value - self.min_value)
 
     def tol_plus_percent(self) -> float:
         if self.typ == 0.0:
@@ -54,16 +57,16 @@ class Toleranced:
 
     def in_range(self, value: Union[float, 'Toleranced', Percentage]) -> bool:
         if isinstance(value, Toleranced):
-            return value.min_value() >= self.min_value() and value.max_value() <= self.max_value()
+            return value.min_value >= self.min_value and value.max_value <= self.max_value
         elif isinstance(value, float):
-            return self.min_value() <= value <= self.max_value()
+            return self.min_value <= value <= self.max_value
         elif isinstance(value, (int, float)):
-            return self.min_value() <= value <= self.max_value()
+            return self.min_value <= value <= self.max_value
         # TODO: Handle Percentage type
         return False
 
     def tolerance_range(self) -> float:
-        return self.max_value() - self.min_value()
+        return self.max_value - self.min_value
 
     def _full_tolerance(self):
         return (
@@ -117,10 +120,10 @@ class Toleranced:
             if self._full_tolerance() and other._full_tolerance():
                 typ = self.typ * other.typ
                 variants = [
-                    self.min_value() * other.min_value(),
-                    self.min_value() * other.max_value(),
-                    self.max_value() * other.min_value(),
-                    self.max_value() * other.max_value(),
+                    self.min_value * other.min_value,
+                    self.min_value * other.max_value,
+                    self.max_value * other.min_value,
+                    self.max_value * other.max_value,
                 ]
                 tol_plus = max(variants) - typ
                 tol_minus = typ - min(variants)
@@ -142,8 +145,8 @@ class Toleranced:
                     raise ZeroDivisionError("Cannot divide by zero for Toleranced values.")
                 typ = self.typ / other.typ
                 inv = Toleranced(1.0 / other.typ,
-                                 1.0 / other.min_value() - 1.0 / other.typ,
-                                 1.0 / other.typ - 1.0 / other.max_value())
+                                 1.0 / other.min_value - 1.0 / other.typ,
+                                 1.0 / other.typ - 1.0 / other.max_value)
                 return self * inv
             else:
                 raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
@@ -162,8 +165,8 @@ class Toleranced:
 
     def apply(self, f: Callable[[float], float]) -> 'Toleranced':
         tv = f(self.typ)
-        minv = f(self.min_value())
-        maxv = f(self.max_value())
+        minv = f(self.min_value)
+        maxv = f(self.max_value)
         return min_typ_max(minv, tv, maxv)
 
 # Helper constructors

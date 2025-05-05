@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Tuple
 from .toleranced import Toleranced, tol
 from jitx_parts.query_api import ResistorQuery
 
@@ -80,7 +80,7 @@ class VoltageDividerConstraints:
         else:
             return None
 
-    def compute_initial_guess(self) -> (float, float):
+    def compute_initial_guess(self) -> Tuple[float, float]:
         """
         Compute an initial guess for the voltage divider solution.
         Returns (r_hi, r_lo)
