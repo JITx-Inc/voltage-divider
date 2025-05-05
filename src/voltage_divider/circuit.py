@@ -1,10 +1,10 @@
 from jitx.circuit import Circuit
 from jitx.net import Port
 from jitx_parts.convert import convert_component
-from src.voltage_divider.solver import VoltageDividerSolution, solve
-from src.voltage_divider.constraints import VoltageDividerConstraints
-from src.voltage_divider.inverse import InverseDividerConstraints
-from src.voltage_divider.toleranced import Toleranced
+from .solver import VoltageDividerSolution, solve
+from .constraints import VoltageDividerConstraints
+from .inverse import InverseDividerConstraints
+from .toleranced import Toleranced
 
 class VoltageDividerCircuit(Circuit):
     """
