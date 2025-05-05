@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional
-from .toleranced import Toleranced, tol
+from .toleranced import Toleranced, tol, tol_percent_symmetric
 from .constraints import VoltageDividerConstraints
 from jitx_parts.query_api import search_resistors, ExistKeys, DistinctKey
 from jitx_parts.types.main import to_component
@@ -46,7 +46,7 @@ def solve(constraints: VoltageDividerConstraints) -> VoltageDividerSolution:
     # Pre-screen precision series
     pre_screen = []
     for std_prec in constraints.prec_series:
-        vo = constraints.compute_objective(tol(goal_r_hi, std_prec), tol(goal_r_lo, std_prec))
+        vo = constraints.compute_objective(tol_percent_symmetric(goal_r_hi, std_prec), tol_percent_symmetric(goal_r_lo, std_prec))
         pre_screen.append((constraints.is_compliant(vo), std_prec, vo))
     first_valid_series = next((i for i, elem in enumerate(pre_screen) if elem[0]), None)
     if first_valid_series is not None:
@@ -125,7 +125,7 @@ def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: f
     base_query = constraints.base_query
     results = search_resistors(
         base_query,
-        resistance=tol(goal_r, min_prec),
+        resistance=tol_percent_symmetric(goal_r, min_prec),
         precision=r_prec,
         exist=exist_keys,
         distinct=distinct_key,
