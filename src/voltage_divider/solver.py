@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional
-from src.voltage_divider.toleranced import Toleranced, tol
-from src.voltage_divider.constraints import VoltageDividerConstraints
+from .toleranced import Toleranced, tol
+from .constraints import VoltageDividerConstraints
 from jitx_parts.query_api import search_resistors, ExistKeys, DistinctKey
 from jitx_parts.types.main import to_component
 from jitx_parts.types.component import Part, MinMax

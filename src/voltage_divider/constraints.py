@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Any
-from src.voltage_divider.toleranced import Toleranced, tol
+from .toleranced import Toleranced, tol
 from jitx_parts.query_api import ResistorQuery
 
 # Default values from utils.stanza

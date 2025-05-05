@@ -1,11 +1,19 @@
+import argparse
+import sys
 import unittest
-from src.voltage_divider.toleranced import Toleranced, tol_percent_symmetric, tol, min_max, min_typ_max
-from src.voltage_divider.constraints import VoltageDividerConstraints
-from src.voltage_divider.inverse import InverseDividerConstraints
-from src.voltage_divider.solver import solve, NoPrecisionSatisfiesConstraintsError, VinRangeTooLargeError, IncompatibleVinVoutError
+from voltage_divider.toleranced import tol_percent_symmetric, tol, min_max, min_typ_max
+from voltage_divider.constraints import VoltageDividerConstraints
+from voltage_divider.inverse import InverseDividerConstraints
+from voltage_divider.solver import solve, NoPrecisionSatisfiesConstraintsError, VinRangeTooLargeError, IncompatibleVinVoutError
 from jitx_parts.query_api import ResistorQuery
+import jitx.run
 
 class TestVoltageDivider(unittest.TestCase):
+    port: int
+
+    def setUp(self):
+        jitx.run.set_websocket_uri("localhost", TestVoltageDivider.port)
+
     def test_basic_solver(self):
         OPERATING_TEMPERATURE = min_max(-20.0, 50.0)
         exp_vout = tol_percent_symmetric(2.5, 5.0)
@@ -69,4 +77,12 @@ class TestVoltageDivider(unittest.TestCase):
         self.assertTrue(tol(14.0e3, 5.0e3).in_range(result.R_l.resistance))
 
 if __name__ == "__main__":
-    unittest.main() 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, help="WebSocket port number")
+    args, unittest_args = parser.parse_known_args()
+
+    # Set the port in the test class
+    TestVoltageDivider.port = args.port
+
+    # Run unittest with remaining arguments
+    unittest.main(argv=sys.argv[:1] + unittest_args)
