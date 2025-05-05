@@ -17,11 +17,10 @@ build-backend = "hatchling.build"
 name = "voltage_divider"
 dynamic = ["version"]
 dependencies = [
-  #"jitxcore>=0.1.dev,<0.2.0",
-  #"websockets==15.0.1",
   "ruff==0.11.2",
   "pyright>=1.1.398,<1.2.0",
-  #"shapely>=2.1.0,<3.0",
+  "jitx>=0.1.dev,<0.2.0",
+  "jitx-parts==0.1.0"
 ]
 requires-python = ">=3.12"
 authors = [
