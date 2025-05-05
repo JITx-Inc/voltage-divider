@@ -6,12 +6,12 @@ from jitx_parts.query_api import search_resistors, ExistKeys, DistinctKey
 from jitx_parts.types.main import to_component
 from jitx_parts.types.component import Part, MinMax
 from jitx_parts.types.resistor import Resistor
-
-# TODO: Implement or import these error classes
-class NoPrecisionSatisfiesConstraintsError(Exception): pass
-class VinRangeTooLargeError(Exception): pass
-class IncompatibleVinVoutError(Exception): pass
-class NoSolutionFoundError(Exception): pass
+from .errors import (
+    NoPrecisionSatisfiesConstraintsError,
+    VinRangeTooLargeError,
+    IncompatibleVinVoutError,
+    NoSolutionFoundError,
+)
 
 @dataclass
 class VoltageDividerSolution:
