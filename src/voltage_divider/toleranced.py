@@ -65,59 +65,100 @@ class Toleranced:
     def tolerance_range(self) -> float:
         return self.max_value() - self.min_value()
 
+    def _full_tolerance(self):
+        return (
+            isinstance(self.typ, float)
+            and isinstance(self.tol_plus, float)
+            and isinstance(self.tol_minus, float)
+        )
+
     # Arithmetic operators
     def __add__(self, other: Union['Toleranced', float]) -> 'Toleranced':
         if isinstance(other, Toleranced):
-            return Toleranced(
-                self.typ + other.typ,
-                self.tol_plus + other.tol_plus,
-                self.tol_minus + other.tol_minus
-            )
+            if self._full_tolerance() and other._full_tolerance():
+                return Toleranced(
+                    self.typ + other.typ,
+                    self.tol_plus + other.tol_plus,
+                    self.tol_minus + other.tol_minus
+                )
+            else:
+                raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
         elif isinstance(other, (int, float)):
             return Toleranced(self.typ + other, self.tol_plus, self.tol_minus)
         return NotImplemented
 
+    def __radd__(self, other: float) -> 'Toleranced':
+        # float + Toleranced
+        return self.__add__(other)
+
     def __sub__(self, other: Union['Toleranced', float]) -> 'Toleranced':
         if isinstance(other, Toleranced):
-            return Toleranced(
-                self.typ - other.typ,
-                self.tol_plus + other.tol_minus,
-                self.tol_minus + other.tol_plus
-            )
+            if self._full_tolerance() and other._full_tolerance():
+                return Toleranced(
+                    self.typ - other.typ,
+                    self.tol_plus + other.tol_minus,
+                    self.tol_minus + other.tol_plus
+                )
+            else:
+                raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
         elif isinstance(other, (int, float)):
             return Toleranced(self.typ - other, self.tol_plus, self.tol_minus)
         return NotImplemented
 
+    def __rsub__(self, other: float) -> 'Toleranced':
+        # float - Toleranced
+        if self._full_tolerance():
+            return Toleranced(other, 0.0, 0.0) - self
+        else:
+            raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
+
     def __mul__(self, other: Union['Toleranced', float, Percentage]) -> 'Toleranced':
         if isinstance(other, Toleranced):
-            typ = self.typ * other.typ
-            variants = [
-                self.min_value() * other.min_value(),
-                self.min_value() * other.max_value(),
-                self.max_value() * other.min_value(),
-                self.max_value() * other.max_value(),
-            ]
-            tol_plus = max(variants) - typ
-            tol_minus = typ - min(variants)
-            return Toleranced(typ, tol_plus, tol_minus)
+            if self._full_tolerance() and other._full_tolerance():
+                typ = self.typ * other.typ
+                variants = [
+                    self.min_value() * other.min_value(),
+                    self.min_value() * other.max_value(),
+                    self.max_value() * other.min_value(),
+                    self.max_value() * other.max_value(),
+                ]
+                tol_plus = max(variants) - typ
+                tol_minus = typ - min(variants)
+                return Toleranced(typ, tol_plus, tol_minus)
+            else:
+                raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
         elif isinstance(other, (int, float)):
             return Toleranced(self.typ * other, abs(self.tol_plus * other), abs(self.tol_minus * other))
         return NotImplemented
 
+    def __rmul__(self, other: float) -> 'Toleranced':
+        # float * Toleranced
+        return self.__mul__(other)
+
     def __truediv__(self, other: Union['Toleranced', float]) -> 'Toleranced':
         if isinstance(other, Toleranced):
-            if other.in_range(0.0):
-                raise ZeroDivisionError("Cannot divide by zero for Toleranced values.")
-            typ = self.typ / other.typ
-            inv = Toleranced(1.0 / other.typ,
-                             1.0 / other.min_value() - 1.0 / other.typ,
-                             1.0 / other.typ - 1.0 / other.max_value())
-            return self * inv
+            if self._full_tolerance() and other._full_tolerance():
+                if other.in_range(0.0):
+                    raise ZeroDivisionError("Cannot divide by zero for Toleranced values.")
+                typ = self.typ / other.typ
+                inv = Toleranced(1.0 / other.typ,
+                                 1.0 / other.min_value() - 1.0 / other.typ,
+                                 1.0 / other.typ - 1.0 / other.max_value())
+                return self * inv
+            else:
+                raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
         elif isinstance(other, (int, float)):
             if other == 0:
                 raise ZeroDivisionError("Cannot divide by zero.")
             return Toleranced(self.typ / other, self.tol_plus / abs(other), self.tol_minus / abs(other))
         return NotImplemented
+
+    def __rtruediv__(self, other: float) -> 'Toleranced':
+        # float / Toleranced
+        if self._full_tolerance():
+            return Toleranced(other, 0.0, 0.0) / self
+        else:
+            raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
 
     def apply(self, f: Callable[[float], float]) -> 'Toleranced':
         tv = f(self.typ)
