@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union
-from .toleranced import Toleranced, tol, tol_exact, tol_percent_symmetric
+from .toleranced import Toleranced, tol_exact, tol_percent_symmetric
+from .settings import OPERATING_TEMPERATURE
 from jitx_parts.query_api import ResistorQuery
 
 # Default values from utils.stanza
@@ -34,16 +35,13 @@ class VoltageDividerConstraints:
     search_range: float = DEF_SEARCH_RANGE
     min_sources: int = DEF_MIN_SRCS
     query_limit: int = DEF_QUERY_LIMIT
-    temp_range: Optional[Toleranced] = None  # Should be set by user if needed
+    temp_range: Toleranced = OPERATING_TEMPERATURE
     base_query: ResistorQuery = field(default_factory=get_default_resistor_query)
 
     def __post_init__(self):
         # Sort precision series descending
         self.prec_series = sorted(self.prec_series, reverse=True)
         ensure_sources_limits(self.min_sources, self.query_limit)
-        if self.temp_range is None:
-            # Default operating temperature range
-            self.temp_range = None  # TODO: Set to min_max(-20.0, 50.0) or user-provided
 
     def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Toleranced = tol_exact(1.0), lo_dr: Toleranced = tol_exact(1.0)) -> Toleranced:
         """
@@ -70,7 +68,13 @@ class VoltageDividerConstraints:
         rl_tol = tol_percent_symmetric(rl, precision)
         vo = self.compute_objective(rh_tol, rl_tol)
         if self.is_compliant(vo):
-            # This metric is suspect - does not consider the span of the output
+            # This metric is suspect
+            #  - It does not consider the span of the output
+            #     For example - you could have two configurations:
+            #       1.  2.5 +/- 0.1
+            #       2.  2.499 +/- 0.01
+            #    If the target was 2.5 - then the first would have lower
+            #    loss but would not be preferred.
             return abs(self.v_out.typ - vo.typ)
         else:
             return None

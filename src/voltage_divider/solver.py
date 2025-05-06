@@ -129,7 +129,6 @@ def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: f
         precision=r_prec,
         exist=exist_keys,
         distinct=distinct_key,
-        limit=constraints.query_limit
     )
 
 def query_resistors(constraints: VoltageDividerConstraints, target: float, prec: float) -> List[Resistor]:
