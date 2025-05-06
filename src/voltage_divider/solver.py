@@ -77,7 +77,7 @@ def filter_query_results(constraints: VoltageDividerConstraints, ratio: Ratio, p
     r_los = query_resistors(constraints, ratio.low, precision)
     min_srcs = constraints.min_sources
     if len(r_his) < min_srcs or len(r_los) < min_srcs:
-        print(f"      Ignoring: there must at least {min_srcs} resistors of each type")
+        print(f"      Ignoring: there must be at least {min_srcs} resistors of each type")
         return None
     r_hi_cmp = r_his[0]
     r_lo_cmp = r_los[0]
@@ -123,13 +123,15 @@ def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: f
     exist_keys = ExistKeys(["tcr_pos", "tcr_neg"])
     distinct_key = DistinctKey("resistance")
     base_query = constraints.base_query
-    return search_resistors(
+    resistances = search_resistors(
         base_query,
         resistance=tol_percent_symmetric(goal_r, min_prec),
         precision=r_prec,
         exist=exist_keys,
         distinct=distinct_key,
     )
+    # Case from int to float (mimic stanza codebase, the database is sensitive to the difference, maybe due to caching).
+    return [float(r) for r in resistances]
 
 def query_resistors(constraints: VoltageDividerConstraints, target: float, prec: float) -> List[Resistor]:
     """

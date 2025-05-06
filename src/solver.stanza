@@ -185,7 +185,7 @@ defn filter-query-results (
   label<Maybe<VoltageDividerSolution>> return:
 
     if length(r-his) < min-srcs or length(r-los) < min-srcs :
-      println("      Ignoring: there must at least %_ resistors of each type" % [min-srcs])
+      println("      Ignoring: there must be at least %_ resistors of each type" % [min-srcs])
       return(None())
 
     val r-hi-cmp = r-his[0]

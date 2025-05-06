@@ -11,9 +11,10 @@ DEF_QUERY_LIMIT = 50
 DEF_SEARCH_RANGE = 10.0  # Percent, unitless
 
 # Helper for default resistor query
+# FIXME: This should be implemented in query_api.py with setters.
 def get_default_resistor_query() -> ResistorQuery:
     """Return a default ResistorQuery instance."""
-    return ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
+    return ResistorQuery()
 
 # Helper for ensure-sources-limits
 def ensure_sources_limits(min_sources: int, query_limit: int):
