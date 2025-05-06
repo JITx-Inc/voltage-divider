@@ -75,8 +75,8 @@ class TestVoltageDivider(unittest.TestCase):
         )
         result = solve(cxt)
         self.assertTrue(exp_vout.in_range(result.vo))
-        self.assertTrue(tol(45.0e3, 10.0e3).in_range(result.R_h.resistance))
-        self.assertTrue(tol(14.0e3, 5.0e3).in_range(result.R_l.resistance))
+        self.assertTrue(tol_symmetric(45.0e3, 10.0e3).in_range(result.R_h.resistance))
+        self.assertTrue(tol_symmetric(14.0e3, 5.0e3).in_range(result.R_l.resistance))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
