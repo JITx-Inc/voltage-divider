@@ -56,6 +56,8 @@ defstruct Ratio :
   <DOC>
   loss: Double with:
     ensure => ensure-non-negative!
+with :
+  printer
 
 doc: \<DOC>
 Solve the Voltage Divider Constraint Problem
@@ -322,4 +324,3 @@ defn study-solution (cxt:VoltageDividerConstraints, r-hi: Resistor, r-lo: Resist
           )
       (lo-dr, hi-dr):
         throw $ ValueError("No TCR Data")
-

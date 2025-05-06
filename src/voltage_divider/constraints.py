@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Any, Tuple
-from .toleranced import Toleranced, tol
+from typing import List, Optional, Tuple, Union
+from .toleranced import Toleranced, tol, tol_exact, tol_percent_symmetric
 from jitx_parts.query_api import ResistorQuery
 
 # Default values from utils.stanza
@@ -45,21 +45,17 @@ class VoltageDividerConstraints:
             # Default operating temperature range
             self.temp_range = None  # TODO: Set to min_max(-20.0, 50.0) or user-provided
 
-    def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Optional[Toleranced] = None, lo_dr: Optional[Toleranced] = None) -> Toleranced:
+    def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Toleranced = tol_exact(1.0), lo_dr: Toleranced = tol_exact(1.0)) -> Toleranced:
         """
         Compute the output objective voltage range as a Toleranced based on resistor features.
         Default: Vobj = V-in * (R-L / (R-H + R-L))
         """
-        if hi_dr is None:
-            hi_dr = tol(1.0)
-        if lo_dr is None:
-            lo_dr = tol(1.0)
         r_hi = rh * hi_dr
         r_lo = rl * lo_dr
         vout = self.v_in * r_lo / (r_lo + r_hi)
         return vout
 
-    def is_compliant(self, v_obj: Any) -> bool:
+    def is_compliant(self, v_obj: Union[Toleranced, float]) -> bool:
         """
         Check if the computed objective voltage is within the user-defined constraints.
         """
@@ -70,9 +66,8 @@ class VoltageDividerConstraints:
         Compute a loss function for a potential solution.
         Returns a positive value if compliant, or None if not a solution.
         """
-        # TODO: Implement plus_minus for Toleranced (rh +/- precision)
-        rh_tol = tol(rh, precision)
-        rl_tol = tol(rl, precision)
+        rh_tol = tol_percent_symmetric(rh, precision)
+        rl_tol = tol_percent_symmetric(rl, precision)
         vo = self.compute_objective(rh_tol, rl_tol)
         if self.is_compliant(vo):
             # This metric is suspect - does not consider the span of the output
