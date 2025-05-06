@@ -25,8 +25,6 @@ class TestVoltageDivider(unittest.TestCase):
         )
         result = solve(cxt)
         self.assertTrue(exp_vout.in_range(result.vo))
-        print(f"R_H: {result.R_h.resistance}")
-        print(f"R_L: {result.R_l.resistance}")
         self.assertTrue(tol_symmetric(165.0e3, 10.0e3).in_range(result.R_h.resistance))
         self.assertTrue(tol_symmetric(55.0e3, 10.0e3).in_range(result.R_l.resistance))
 
