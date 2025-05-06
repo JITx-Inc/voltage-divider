@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
-from .toleranced import Toleranced, tol
+from typing import List, Optional, Tuple
+from .toleranced import Toleranced, tol_exact
 from .constraints import VoltageDividerConstraints, get_default_resistor_query, ensure_sources_limits, STD_PRECS, DEF_MIN_SRCS, DEF_QUERY_LIMIT, DEF_SEARCH_RANGE
 from jitx_parts.query_api import ResistorQuery
 
@@ -28,25 +28,21 @@ class InverseDividerConstraints(VoltageDividerConstraints):
         if self.temp_range is None:
             self.temp_range = None  # TODO: Set to min_max(-20.0, 50.0) or user-provided
 
-    def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Optional[Toleranced] = None, lo_dr: Optional[Toleranced] = None) -> Toleranced:
+    def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Toleranced = tol_exact(1.0), lo_dr: Toleranced = tol_exact(1.0)) -> Toleranced:
         """
         Compute the output objective voltage range as a Toleranced based on resistor features.
         Default: Vobj = V-in * (1 + (R-H / R-L))
         """
-        if hi_dr is None:
-            hi_dr = tol(1.0)
-        if lo_dr is None:
-            lo_dr = tol(1.0)
         r_hi = rh * hi_dr
         r_lo = rl * lo_dr
         vout = self.v_in * (1.0 + (r_hi / r_lo))
         return vout
 
-    def compute_initial_guess(self) -> (float, float):
+    def compute_initial_guess(self) -> Tuple[float, float]:
         """
         Compute an initial guess for the inverse voltage divider solution.
         Returns (r_hi, r_lo)
         """
         r_hi = (self.v_out.typ - self.v_in.typ) / self.current
         r_lo = self.v_in.typ / self.current
-        return r_hi, r_lo 
+        return r_hi, r_lo
