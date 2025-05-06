@@ -60,4 +60,4 @@ def inverse_divider(v_in: Toleranced, v_out: Toleranced, current: float, name: s
     Construct an inverse voltage divider circuit from basic parameters.
     """
     cxt = InverseDividerConstraints(v_in=v_in, v_out=v_out, current=current)
-    return voltage_divider_from_constraints(cxt, name=name) 
+    return voltage_divider_from_constraints(cxt, name=name)

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, Union, Callable
 from jitx_parts.interval import Interval
 import math
+from jitx_parts.types.component import MinMax
 
 # TODO: Implement or import Percentage type as needed
 # For now, treat as float in [0, 1] for percentage (e.g., 0.01 for 1%)
@@ -17,16 +18,20 @@ class Toleranced(Interval):
     :param tol_minus: Relative negative increment (min bound, or None for unbounded)
     """
     typ: float
-    tol_plus: Optional[float] = 0.0
-    tol_minus: Optional[float] = 0.0
+    tol_plus: Optional[float]
+    tol_minus: Optional[float]
 
     def __str__(self):
-        if self.tol_minus and self.tol_plus:
+        # Both bounds present
+        if self.tol_minus is not None and self.tol_plus is not None:
             return f"Toleranced({self.min_value} <= {self.typ} <= {self.max_value})"
-        elif self.tol_minus:
+        # Only min bound present
+        elif self.tol_minus is not None:
             return f"Toleranced({self.min_value} <= typ:{self.typ})"
-        elif self.tol_plus:
+        # Only max bound present
+        elif self.tol_plus is not None:
             return f"Toleranced(typ:{self.typ} <= {self.max_value})"
+        # Neither bound present (should not happen in normal use)
         else:
             return f"Toleranced({self.typ})"
 
@@ -55,24 +60,22 @@ class Toleranced(Interval):
             raise ValueError("typ() != 0.0 to compute tol-%(Toleranced)")
         return 100.0 * self.tol_minus / self.typ
 
-    def in_range(self, value: Union[float, 'Toleranced', Percentage]) -> bool:
+    def in_range(self, value: Union[float, 'Toleranced']) -> bool:
         if isinstance(value, Toleranced):
             return value.min_value >= self.min_value and value.max_value <= self.max_value
         elif isinstance(value, float):
             return self.min_value <= value <= self.max_value
-        elif isinstance(value, (int, float)):
-            return self.min_value <= value <= self.max_value
-        # TODO: Handle Percentage type
         return False
 
     def tolerance_range(self) -> float:
         return self.max_value - self.min_value
 
     def _full_tolerance(self):
+        """Return True if typ, tol_plus, and tol_minus are all specified (not None). 0.0 is valid and means exact."""
         return (
-            isinstance(self.typ, float)
-            and isinstance(self.tol_plus, float)
-            and isinstance(self.tol_minus, float)
+            self.typ is not None
+            and self.tol_plus is not None
+            and self.tol_minus is not None
         )
 
     # Arithmetic operators
@@ -85,13 +88,12 @@ class Toleranced(Interval):
                     self.tol_minus + other.tol_minus
                 )
             else:
-                raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
+                raise ValueError("Toleranced() arithmetic operations require fully specified arguments (None is not allowed, 0.0 is valid)")
         elif isinstance(other, (int, float)):
             return Toleranced(self.typ + other, self.tol_plus, self.tol_minus)
         return NotImplemented
 
     def __radd__(self, other: float) -> 'Toleranced':
-        # float + Toleranced
         return self.__add__(other)
 
     def __sub__(self, other: Union['Toleranced', float]) -> 'Toleranced':
@@ -103,17 +105,16 @@ class Toleranced(Interval):
                     self.tol_minus + other.tol_plus
                 )
             else:
-                raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
+                raise ValueError("Toleranced() arithmetic operations require fully specified arguments (None is not allowed, 0.0 is valid)")
         elif isinstance(other, (int, float)):
             return Toleranced(self.typ - other, self.tol_plus, self.tol_minus)
         return NotImplemented
 
     def __rsub__(self, other: float) -> 'Toleranced':
-        # float - Toleranced
         if self._full_tolerance():
             return Toleranced(other, 0.0, 0.0) - self
         else:
-            raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
+            raise ValueError("Toleranced() arithmetic operations require fully specified arguments (None is not allowed, 0.0 is valid)")
 
     def __mul__(self, other: Union['Toleranced', float, Percentage]) -> 'Toleranced':
         if isinstance(other, Toleranced):
@@ -129,13 +130,12 @@ class Toleranced(Interval):
                 tol_minus = typ - min(variants)
                 return Toleranced(typ, tol_plus, tol_minus)
             else:
-                raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
+                raise ValueError("Toleranced() arithmetic operations require fully specified arguments (None is not allowed, 0.0 is valid)")
         elif isinstance(other, (int, float)):
             return Toleranced(self.typ * other, abs(self.tol_plus * other), abs(self.tol_minus * other))
         return NotImplemented
 
     def __rmul__(self, other: float) -> 'Toleranced':
-        # float * Toleranced
         return self.__mul__(other)
 
     def __truediv__(self, other: Union['Toleranced', float]) -> 'Toleranced':
@@ -149,7 +149,7 @@ class Toleranced(Interval):
                                  1.0 / other.typ - 1.0 / other.max_value)
                 return self * inv
             else:
-                raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
+                raise ValueError("Toleranced() arithmetic operations require fully specified arguments (None is not allowed, 0.0 is valid)")
         elif isinstance(other, (int, float)):
             if other == 0:
                 raise ZeroDivisionError("Cannot divide by zero.")
@@ -157,11 +157,10 @@ class Toleranced(Interval):
         return NotImplemented
 
     def __rtruediv__(self, other: float) -> 'Toleranced':
-        # float / Toleranced
         if self._full_tolerance():
             return Toleranced(other, 0.0, 0.0) / self
         else:
-            raise ValueError("Toleranced() arithmetic operations require fully specified arguments")
+            raise ValueError("Toleranced() arithmetic operations require fully specified arguments (None is not allowed, 0.0 is valid)")
 
     def apply(self, f: Callable[[float], float]) -> 'Toleranced':
         tv = f(self.typ)
@@ -226,9 +225,17 @@ def tol_percent_symmetric(typ: float, tol: float) -> Toleranced:
     delta = abs(typ * tol / 100.0)
     return Toleranced(typ, delta, delta)
 
-def tol(typ: float, tol_plus: Optional[float] = 0.0, tol_minus: Optional[float] = 0.0) -> Toleranced:
+def tol(typ: float, tol_plus: Optional[float], tol_minus: Optional[float]) -> Toleranced:
     """Create a tolerance from differences higher and lower."""
     return Toleranced(typ, tol_plus, tol_minus)
+
+def tol_symmetric(typ: float, tol_pm: float) -> Toleranced:
+    """Create a Toleranced with symmetric relative values (both tol+ and tol- equal to tol_pm)."""
+    return tol(typ, tol_pm, tol_pm)
+
+def tol_exact(typ: float) -> Toleranced:
+    """Create a Toleranced with zero tol+ and tol- (exact value)."""
+    return tol(typ, 0.0, 0.0)
 
 def typ_toleranced(typ: float) -> Toleranced:
     """Alias for Toleranced with Zero'd tol+ and tol-."""
@@ -236,4 +243,15 @@ def typ_toleranced(typ: float) -> Toleranced:
 
 def Exactly(x: float) -> Toleranced:
     """Exactly a value (zero tolerance)."""
-    return Toleranced(x, 0.0, 0.0) 
+    return Toleranced(x, 0.0, 0.0)
+
+def tol_minmax(typ: float, tolerance: MinMax) -> Toleranced:
+    """
+    Create a Toleranced value from the MinMax range.
+    Mirrors the Stanza implementation:
+    tol(v, tolerance:MinMaxRange):
+      coeff = min-max(1.0 + min(tolerance), 1.0 + max(tolerance))
+      v * coeff
+    """
+    coeff = min_max(1.0 + tolerance.min, 1.0 + tolerance.max)
+    return typ * coeff 

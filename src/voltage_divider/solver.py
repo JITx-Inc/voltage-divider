@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional
-from .toleranced import Toleranced, tol, tol_percent_symmetric
+from .toleranced import Toleranced, min_max, tol_exact, tol_percent_symmetric, tol_minmax
 from .constraints import VoltageDividerConstraints
 from jitx_parts.query_api import search_resistors, ExistKeys, DistinctKey
 from jitx_parts.types.main import to_component
-from jitx_parts.types.component import Part, MinMax
+from jitx_parts.types.component import MinMax
 from jitx_parts.types.resistor import Resistor
 from .errors import (
     NoPrecisionSatisfiesConstraintsError,
@@ -18,8 +18,8 @@ class VoltageDividerSolution:
     """
     Voltage Divider Solution Type
     """
-    R_h: Any  # Resistor object
-    R_l: Any  # Resistor object
+    R_h: Resistor
+    R_l: Resistor
     vo: Toleranced
 
 @dataclass
@@ -40,7 +40,7 @@ def solve(constraints: VoltageDividerConstraints) -> VoltageDividerSolution:
             raise IncompatibleVinVoutError(constraints.v_in, constraints.v_out)
     goal_r_hi, goal_r_lo = goals
     # Screen the input voltage requirement with perfect resistors
-    vin_screen = constraints.compute_objective(tol(goal_r_hi, 0.0), tol(goal_r_lo, 0.0))
+    vin_screen = constraints.compute_objective(tol_exact(goal_r_hi), tol_exact(goal_r_lo))
     if not constraints.is_compliant(vin_screen):
         raise VinRangeTooLargeError(goals, vin_screen)
     # Pre-screen precision series
@@ -94,8 +94,8 @@ def filter_query_results(constraints: VoltageDividerConstraints, ratio: Ratio, p
     # TODO: Compute the worst case v-out here and use that instead of just the first
     worst_case_vo = vo_set[0]
     # Print solution found
-    mpn1 = getattr(r_hi_cmp, 'mpn', 'unknown')
-    mpn2 = getattr(r_lo_cmp, 'mpn', 'unknown')
+    mpn1 = r_hi_cmp.mpn
+    mpn2 = r_lo_cmp.mpn
     vout_str = f"({vo_set[0]}, {vo_set[1]})V" if len(vo_set) > 1 else f"({vo_set[0]})V"
     try:
         current = vo_set[0].typ / ratio.low
@@ -123,7 +123,7 @@ def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: f
     exist_keys = ExistKeys(["tcr_pos", "tcr_neg"])
     distinct_key = DistinctKey("resistance")
     base_query = constraints.base_query
-    results = search_resistors(
+    return search_resistors(
         base_query,
         resistance=tol_percent_symmetric(goal_r, min_prec),
         precision=r_prec,
@@ -131,13 +131,11 @@ def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: f
         distinct=distinct_key,
         limit=constraints.query_limit
     )
-    # Extract resistance values from the results
-    return [getattr(r, "resistance", goal_r) for r in results]
 
-def query_resistors(constraints: VoltageDividerConstraints, target: float, prec: float) -> List[Part]:
+def query_resistors(constraints: VoltageDividerConstraints, target: float, prec: float) -> List[Resistor]:
     """
     Query for resistors matching a particular target resistance and precision.
-    Returns a list of Part objects.
+    Returns a list of Resistor objects.
     """
     exist_keys = ExistKeys(["tcr_pos", "tcr_neg"])
     base_query = constraints.base_query
@@ -148,7 +146,7 @@ def query_resistors(constraints: VoltageDividerConstraints, target: float, prec:
         exist=exist_keys,
         limit=constraints.query_limit
     )
-    # Convert results to Part objects using to_component
+    # Convert results to Resistor objects
     return [to_component(r) for r in results]
 
 def study_solution(constraints: VoltageDividerConstraints, r_hi: Resistor, r_lo: Resistor, temp_range: Optional[Toleranced]) -> List[Toleranced]:
@@ -177,29 +175,42 @@ def get_resistance(r: Resistor) -> Toleranced:
     """
     Get the resistance value as a Toleranced.
     Uses the internal information of the Resistor component object to construct the resistance value with tolerances.
+    Raises an error if tolerance is None. Always expects MinMax for tolerance.
     """
-    # If tolerance is a MinMax, use min/max, else treat as symmetric
-    if r.tolerance is not None:
-        t = r.tolerance
-        # If t is MinMax, treat as asymmetric
-        if isinstance(t, MinMax):
-            return tol(r.resistance, abs(t.max * r.resistance), abs(t.min * r.resistance))
-        else:
-            # Fallback: treat as symmetric
-            return tol(r.resistance, abs(t * r.resistance), abs(t * r.resistance))
-    else:
-        return tol(r.resistance, 0.0, 0.0)
+    if r.tolerance is None:
+        raise ValueError("Resistor tolerance must be specified (MinMax). None is not allowed.")
+    return tol_minmax(r.resistance, r.tolerance)
 
-def compute_tcr_deviation(resistor: Resistor, temperature: float, ref_temp: float = 25.0) -> Optional[Toleranced]:
+def compute_tcr_deviation(resistor: Resistor, temperature: float) -> Optional[Toleranced]:
     """
     Compute the expected deviation window of a given resistor at a given temperature.
-    Returns a Toleranced window for the deviation (typically ~0.9 to 1.1).
+
+    This function mirrors the Stanza implementation in component-types.stanza:
+    - Extracts tcr and reference temperature from the resistor.
+    - Converts pos/neg to a Toleranced interval using min_max.
+    - Calls compute_tcr_deviation_interval.
+    - Returns None if tcr is not present.
+
+    NOTE: This includes a workaround for known database issues with TCR values,
+    as described in the Stanza code and PROD-328.
     """
     tcr = resistor.tcr
+    ref_temp = 25.0  # Default reference temperature
     if tcr is None:
         return None
-    # MinMaxRange in stanza is ResistorTCR in Python
-    tcr_tol = Toleranced(0.0, abs(tcr.pos), abs(tcr.neg))
+    # This mirrors the Stanza hack for database issues:
+    # See: https://linear.app/jitx/issue/PROD-328/tcr-values-in-database-seem-wrong
+    p, n = tcr.pos, tcr.neg
+    tcr_interval = min_max(min(p, n), max(p, n))
+    return compute_tcr_deviation_interval(tcr_interval, temperature, ref_temp)
+
+def compute_tcr_deviation_interval(tcr: Toleranced, temperature: float, ref_temp: float = 25.0) -> Toleranced:
+    """
+    Compute the expected deviation window of a given temperature coefficient.
+
+    This function mirrors the Stanza implementation:
+    - Returns 1.0 + (diff * tcr), where diff = temperature - ref_temp.
+    - The result is a Toleranced window for the deviation (typically ~0.9 to 1.1).
+    """
     diff = temperature - ref_temp
-    # 1.0 + (diff * tcr) for both + and -
-    return Toleranced(1.0, abs(diff * tcr.pos), abs(diff * tcr.neg))
+    return 1.0 + (diff * tcr)

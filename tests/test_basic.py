@@ -1,7 +1,7 @@
 import argparse
 import sys
 import unittest
-from voltage_divider.toleranced import tol_percent_symmetric, tol, min_max, min_typ_max
+from voltage_divider.toleranced import tol_percent_symmetric, tol, min_max, min_typ_max, tol_symmetric
 from voltage_divider.constraints import VoltageDividerConstraints
 from voltage_divider.inverse import InverseDividerConstraints
 from voltage_divider.solver import solve, NoPrecisionSatisfiesConstraintsError, VinRangeTooLargeError, IncompatibleVinVoutError
@@ -25,8 +25,10 @@ class TestVoltageDivider(unittest.TestCase):
         )
         result = solve(cxt)
         self.assertTrue(exp_vout.in_range(result.vo))
-        self.assertTrue(tol(165.0e3, 10.0e3).in_range(result.R_h.resistance))
-        self.assertTrue(tol(55.0e3, 10.0e3).in_range(result.R_l.resistance))
+        print(f"R_H: {result.R_h.resistance}")
+        print(f"R_L: {result.R_l.resistance}")
+        self.assertTrue(tol_symmetric(165.0e3, 10.0e3).in_range(result.R_h.resistance))
+        self.assertTrue(tol_symmetric(55.0e3, 10.0e3).in_range(result.R_l.resistance))
 
     def test_fail_case_1(self):
         cxt = VoltageDividerConstraints(
