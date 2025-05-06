@@ -65,7 +65,8 @@ class Toleranced(Interval):
             return value.min_value >= self.min_value and value.max_value <= self.max_value
         elif isinstance(value, float):
             return self.min_value <= value <= self.max_value
-        return False
+        else:
+            raise ValueError("in_range() requires a Toleranced or float value.")
 
     def tolerance_range(self) -> float:
         return self.max_value - self.min_value
@@ -143,17 +144,19 @@ class Toleranced(Interval):
             if self._full_tolerance() and other._full_tolerance():
                 if other.in_range(0.0):
                     raise ZeroDivisionError("Cannot divide by zero for Toleranced values.")
-                typ = self.typ / other.typ
-                inv = Toleranced(1.0 / other.typ,
-                                 1.0 / other.min_value - 1.0 / other.typ,
-                                 1.0 / other.typ - 1.0 / other.max_value)
+                typ = 1.0 / other.typ
+                inv = Toleranced(typ,
+                                 1.0 / other.min_value - typ,
+                                 typ - 1.0 / other.max_value)
                 return self * inv
             else:
                 raise ValueError("Toleranced() arithmetic operations require fully specified arguments (None is not allowed, 0.0 is valid)")
         elif isinstance(other, (int, float)):
             if other == 0:
                 raise ZeroDivisionError("Cannot divide by zero.")
-            return Toleranced(self.typ / other, self.tol_plus / abs(other), self.tol_minus / abs(other))
+            elif other < 0:
+                raise ValueError("Cannot divide Toleranced by negative value.")
+            return Toleranced(self.typ / other, self.tol_plus / other, self.tol_minus / other)
         return NotImplemented
 
     def __rtruediv__(self, other: float) -> 'Toleranced':
