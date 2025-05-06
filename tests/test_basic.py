@@ -15,12 +15,12 @@ class TestVoltageDivider(unittest.TestCase):
         jitx.run.set_websocket_uri("localhost", TestVoltageDivider.port)
 
     def test_basic_solver(self):
-        OPERATING_TEMPERATURE = min_max(-20.0, 50.0)
         exp_vout = tol_percent_symmetric(2.5, 5.0)
         cxt = VoltageDividerConstraints(
             v_in=tol_percent_symmetric(10.0, 1.0),
             v_out=exp_vout,
             current=50.0e-6,
+            temp_range=min_max(-20.0, 50.0),
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
         )
         result = solve(cxt)
@@ -65,12 +65,12 @@ class TestVoltageDivider(unittest.TestCase):
         self.assertIn("No Precision Series", str(cm.exception))
 
     def test_inverse_divider(self):
-        OPERATING_TEMPERATURE = min_max(-20.0, 50.0)
         exp_vout = tol_percent_symmetric(3.3, 2.0)
         cxt = InverseDividerConstraints(
             v_in=min_typ_max(0.788, 0.8, 0.812),
             v_out=exp_vout,
             current=50.0e-6,
+            temp_range=min_max(-20.0, 50.0),
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"])
         )
         result = solve(cxt)
