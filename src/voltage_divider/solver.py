@@ -153,6 +153,10 @@ def study_solution(constraints: VoltageDividerConstraints, r_hi: Resistor, r_lo:
     Compute the voltage divider expected output over a temperature range.
     Returns a list of Toleranced values for [min_temp, max_temp].
     """
+
+    if r_lo.resistance == 0.0 and r_hi.resistance == 0.0 :
+        raise ValueError(f"Can't check output voltage current for a solution with two zero ohm resistors {r_lo.mpn} and {r_hi.mpn}.")
+
     # Compute TCR deviations for min and max temperature
     lo_drs = [compute_tcr_deviation(r_lo, temp_range.min_value), compute_tcr_deviation(r_lo, temp_range.max_value)]
     hi_drs = [compute_tcr_deviation(r_hi, temp_range.min_value), compute_tcr_deviation(r_hi, temp_range.max_value)]
