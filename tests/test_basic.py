@@ -1,6 +1,7 @@
 import argparse
 import sys
 import unittest
+from voltage_divider.circuit import voltage_divider_from_constraints
 from voltage_divider.toleranced import tol_percent_symmetric, tol, min_max, min_typ_max, tol_symmetric
 from voltage_divider.constraints import VoltageDividerConstraints
 from voltage_divider.inverse import InverseDividerConstraints
@@ -75,6 +76,98 @@ class TestVoltageDivider(unittest.TestCase):
         self.assertTrue(exp_vout.in_range(result.vo))
         self.assertTrue(tol_symmetric(45.0e3, 10.0e3).in_range(result.R_h.resistance))
         self.assertTrue(tol_symmetric(14.0e3, 5.0e3).in_range(result.R_l.resistance))
+
+    def test_inverse_divider_circuit(self):
+        cxt = InverseDividerConstraints(
+            v_in=min_typ_max(0.788, 0.8, 0.812),
+            v_out=tol_percent_symmetric(3.3, 2.0),
+            current=50.0e-6,
+            temp_range=min_max(-20.0, 50.0),
+            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"])
+        )
+        circuit = voltage_divider_from_constraints(cxt, name="test_inverse_divider_circuit")
+        build_design(circuit, "test_inverse_divider_circuit")
+
+def build_design(circuit: jitx.Circuit, design_name: str):
+    """Build a design from a component and send it to the web socket.
+
+    Args:
+        circuit: The circuit to build the design from
+        design_name: The name of the design
+    """
+
+    class QueryStackup(jitx.stackup.Stackup):
+        layers = [
+            jitx.stackup.Layer(jitx.stackup.Dielectric(), thickness=0.1),
+            jitx.stackup.Layer(jitx.stackup.Conductor(), thickness=0.1),
+            jitx.stackup.Layer(jitx.stackup.Dielectric(), thickness=0.1),
+            jitx.stackup.Layer(jitx.stackup.Conductor(), thickness=0.1),
+            jitx.stackup.Layer(jitx.stackup.Dielectric(), thickness=0.1),
+        ]
+
+    class QueryRules(jitx.substrate.FabricationConstraints):
+        min_copper_width = 0.127
+        min_copper_copper_space = 0.127
+        min_copper_hole_space = 0.127
+        min_copper_edge_space = 0.127
+
+        min_annular_ring = 0.127
+        min_drill_diameter = 0.127
+        min_silkscreen_width = 0.127
+        min_pitch_leaded = 0.127
+        min_pitch_bga = 0.127
+
+        max_board_width = 0.127
+        max_board_height = 0.127
+
+        min_silk_solder_mask_space = 0.127
+        min_silkscreen_text_height = 0.127
+        solder_mask_registration = 0.127
+        min_soldermask_opening = 0.127
+        min_soldermask_bridge = 0.127
+
+        min_th_pad_expand_outer = 0.127
+        min_hole_to_hole = 0.127
+        min_pth_pin_solder_clearance = 0.127
+
+    class QuerySubstrate(jitx.substrate.Substrate):
+        stackup = QueryStackup()
+        rules = QueryRules()
+
+    class QueryBoard(jitx.Board):
+        shape = jitx.shapes.primitive.Circle(radius=5)
+
+    # Create a dynamic class name based on the component name
+    DesignClass = type(
+        f"{design_name}",
+        (jitx.Design,),
+        {"substrate": QuerySubstrate(), "board": QueryBoard(), "main": circuit},
+    )
+
+    jitx.run.build(
+        name=design_name, design=DesignClass, formatter=text_formatter, dump=f"{design_name}.json"
+    )
+
+def text_formatter(ob, file=sys.stdout, indent=0):
+    # not great but better than nothing, could use yaml or something.
+    ind = "  " * indent
+    if isinstance(ob, dict):
+        for key, value in ob.items():
+            if isinstance(value, (list, dict)):
+                print(ind + key + ":", file=file)
+                text_formatter(value, file, indent + 1)
+            else:
+                print(ind + key + ":" + " " + str(value), file=file)
+    elif isinstance(ob, list):
+        if not ob:
+            print(ind + "[]", file=file)
+        for el in ob:
+            if isinstance(el, (list, dict)):
+                text_formatter(el, file, indent + 1)
+            else:
+                text_formatter(el, file, indent)
+    else:
+        print(ind + str(ob), file=file)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
