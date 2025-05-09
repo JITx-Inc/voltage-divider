@@ -1,4 +1,5 @@
 from jitx.circuit import Circuit
+from jitx.inspect import decompose
 from jitx.net import Port
 from jitx_parts.convert import convert_component
 from .solver import VoltageDividerSolution, solve
@@ -21,10 +22,11 @@ class VoltageDividerCircuit(Circuit):
         self.r_hi = convert_component(sol.R_h.component, component_name="r_hi")()
         self.r_lo = convert_component(sol.R_l.component, component_name="r_lo")()
         # Nets (connections)
+        p1, p2 = decompose(self.r_hi, Port)
         self.nets = [
-            self.r_hi.ports["p[1]"] + self.hi,
-            self.r_hi.ports["p[2]"] + self.r_lo.ports["p[1]"] + self.out,
-            self.r_lo.ports["p[2]"] + self.lo
+            p1 + self.hi,
+            p2 + p1 + self.out,
+            p2 + self.lo
         ]
         # FIXME: Properties are a concept of JITX ESIR interface and don't have a port in the python interface.
         self.output_voltage = sol.vo
