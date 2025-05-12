@@ -145,7 +145,7 @@ def query_resistors(constraints: VoltageDividerConstraints, target: float, prec:
         resistance=target,
         precision=prec,
         exist=exist_keys,
-        limit=constraints.query_limit
+        limit=constraints.min_sources
     )
     # Convert results to Resistor objects
     return [to_component(r) for r in results]
