@@ -22,11 +22,12 @@ class VoltageDividerCircuit(Circuit):
         self.r_hi = convert_component(sol.R_h.component, component_name="r_hi")()
         self.r_lo = convert_component(sol.R_l.component, component_name="r_lo")()
         # Nets (connections)
-        p1, p2 = decompose(self.r_hi, Port)
+        h_p1, h_p2 = decompose(self.r_hi, Port)
+        l_p1, l_p2 = decompose(self.r_lo, Port)
         self.nets = [
-            p1 + self.hi,
-            p2 + p1 + self.out,
-            p2 + self.lo
+            h_p1 + self.hi,
+            h_p2 + l_p1 + self.out,
+            l_p2 + self.lo
         ]
         # FIXME: Properties are a concept of JITX ESIR interface and don't have a port in the python interface.
         self.output_voltage = sol.vo
