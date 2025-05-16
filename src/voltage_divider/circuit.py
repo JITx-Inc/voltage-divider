@@ -1,3 +1,4 @@
+from typing import Optional
 from jitx.circuit import Circuit
 from jitx.inspect import decompose
 from jitx.net import Port
@@ -32,7 +33,7 @@ class VoltageDividerCircuit(Circuit):
         # FIXME: Properties are a concept of JITX ESIR interface and don't have a port in the python interface.
         self.output_voltage = sol.vo
 
-def voltage_divider(sol: VoltageDividerSolution, name: str = None) -> Circuit:
+def voltage_divider(sol: VoltageDividerSolution, name: Optional[str] = None) -> Circuit:
     """
     Construct a voltage divider circuit from a solution.
     The returned class will have the type name set to `name` if provided.
@@ -44,21 +45,21 @@ def voltage_divider(sol: VoltageDividerSolution, name: str = None) -> Circuit:
     else:
         return base_class(sol)
 
-def voltage_divider_from_constraints(cxt: VoltageDividerConstraints, name: str = None) -> Circuit:
+def voltage_divider_from_constraints(cxt: VoltageDividerConstraints, name: Optional[str] = None) -> Circuit:
     """
     Construct a voltage divider circuit from constraints (forward or inverse).
     """
     sol = solve(cxt)
     return voltage_divider(sol, name=name)
 
-def forward_divider(v_in: Toleranced, v_out: Toleranced, current: float, name: str = None) -> Circuit:
+def forward_divider(v_in: Toleranced, v_out: Toleranced, current: float, name: Optional[str] = None) -> Circuit:
     """
     Construct a forward voltage divider circuit from basic parameters.
     """
     cxt = VoltageDividerConstraints(v_in=v_in, v_out=v_out, current=current)
     return voltage_divider_from_constraints(cxt, name=name)
 
-def inverse_divider(v_in: Toleranced, v_out: Toleranced, current: float, name: str = None) -> Circuit:
+def inverse_divider(v_in: Toleranced, v_out: Toleranced, current: float, name: Optional[str] = None) -> Circuit:
     """
     Construct an inverse voltage divider circuit from basic parameters.
     """

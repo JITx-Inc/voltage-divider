@@ -21,6 +21,10 @@ class Toleranced(Interval):
     tol_plus: Optional[float]
     tol_minus: Optional[float]
 
+    def __post_init__(self):
+        assert self.tol_plus >= 0.0
+        assert self.tol_minus >= 0.0
+
     def __str__(self):
         # Both bounds present
         if self.tol_minus is not None and self.tol_plus is not None:
