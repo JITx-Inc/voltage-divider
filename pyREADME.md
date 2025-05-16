@@ -79,4 +79,4 @@ The returned circuit objects are compatible with JITX and can be used in larger 
 
 ## License
 
-See LICENSE file. 
+See LICENSE file.
