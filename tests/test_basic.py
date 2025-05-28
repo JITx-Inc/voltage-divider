@@ -1,13 +1,15 @@
 import argparse
 import sys
 import unittest
+
+import jitx.run
+from jitx.toleranced import tol_percent_symmetric, min_max, min_typ_max, tol_symmetric
+
 from voltage_divider.circuit import voltage_divider_from_constraints
-from voltage_divider.toleranced import tol_percent_symmetric, tol, min_max, min_typ_max, tol_symmetric
 from voltage_divider.constraints import VoltageDividerConstraints
 from voltage_divider.inverse import InverseDividerConstraints
 from voltage_divider.solver import solve, NoPrecisionSatisfiesConstraintsError, VinRangeTooLargeError, IncompatibleVinVoutError
 from jitx_parts.query_api import ResistorQuery
-import jitx.run
 
 class TestVoltageDivider(unittest.TestCase):
     port: int

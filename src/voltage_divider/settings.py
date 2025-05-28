@@ -1,5 +1,5 @@
 # FIXME: Only OPERATING_TEMPERATURE is used in the voltage divider. See about reconciling with jsl port to python
-from .toleranced import Toleranced, min_max
+from jitx.toleranced import Toleranced, min_max
 
 # ============================================
 # ====== Design/Part Selection Settings ======

@@ -1,8 +1,11 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
-from .toleranced import Toleranced, tol_exact
-from .constraints import VoltageDividerConstraints, get_default_resistor_query, ensure_sources_limits, STD_PRECS, DEF_MIN_SRCS, DEF_QUERY_LIMIT, DEF_SEARCH_RANGE
+
+from jitx.toleranced import Toleranced, tol_exact
 from jitx_parts.query_api import ResistorQuery
+
+from .constraints import VoltageDividerConstraints, get_default_resistor_query, ensure_sources_limits, STD_PRECS, DEF_MIN_SRCS, DEF_QUERY_LIMIT, DEF_SEARCH_RANGE
+
 
 @dataclass
 class InverseDividerConstraints(VoltageDividerConstraints):

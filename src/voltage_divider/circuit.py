@@ -2,11 +2,12 @@ from typing import Optional
 from jitx.circuit import Circuit
 from jitx.inspect import decompose
 from jitx.net import Port
+from jitx.toleranced import Toleranced
 from jitx_parts.convert import convert_component
+
 from .solver import VoltageDividerSolution, solve
 from .constraints import VoltageDividerConstraints
 from .inverse import InverseDividerConstraints
-from .toleranced import Toleranced
 
 class VoltageDividerCircuit(Circuit):
     """

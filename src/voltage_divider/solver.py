@@ -1,11 +1,13 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional
-from .toleranced import Toleranced, min_max, tol_exact, tol_percent_symmetric, tol_minmax
-from .constraints import VoltageDividerConstraints
+from typing import List, Optional
+
+from jitx.toleranced import Toleranced, min_max, tol_exact, tol_percent_symmetric
 from jitx_parts.query_api import search_resistors, ExistKeys, DistinctKey
 from jitx_parts.types.main import to_component
 from jitx_parts.types.component import MinMax
 from jitx_parts.types.resistor import Resistor
+
+from .constraints import VoltageDividerConstraints
 from .errors import (
     NoPrecisionSatisfiesConstraintsError,
     VinRangeTooLargeError,
@@ -182,6 +184,17 @@ def get_resistance(r: Resistor) -> Toleranced:
     if r.tolerance is None:
         raise ValueError("Resistor tolerance must be specified (MinMax). None is not allowed.")
     return tol_minmax(r.resistance, r.tolerance)
+
+def tol_minmax(typ: float, tolerance: MinMax) -> Toleranced:
+    """
+    Create a Toleranced value from the MinMax range.
+    Mirrors the Stanza implementation:
+    tol(v, tolerance:MinMaxRange):
+      coeff = min-max(1.0 + min(tolerance), 1.0 + max(tolerance))
+      v * coeff
+    """
+    coeff = min_max(1.0 + tolerance.min, 1.0 + tolerance.max)
+    return typ * coeff
 
 def compute_tcr_deviation(resistor: Resistor, temperature: float) -> Optional[Toleranced]:
     """
