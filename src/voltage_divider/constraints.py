@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union
-from .toleranced import Toleranced, tol_exact, tol_percent_symmetric
-from .settings import OPERATING_TEMPERATURE
+
+from jitx.toleranced import Toleranced, tol_exact, tol_percent_symmetric
 from jitx_parts.query_api import ResistorQuery
+
+from .settings import OPERATING_TEMPERATURE
 
 # Default values from utils.stanza
 STD_PRECS = [20.0, 10.0, 5.0, 2.0, 1.0, 0.5, 0.25, 0.1]  # Percentages, unitless
