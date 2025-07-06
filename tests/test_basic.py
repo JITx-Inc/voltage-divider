@@ -27,7 +27,8 @@ class TestVoltageDivider(unittest.TestCase):
             temp_range=Toleranced.min_max(-20.0, 50.0),
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
         )
-        result = solve(cxt)
+        with jitx._instantiation.instantiation.activate():
+            result = solve(cxt)
         self.assertTrue(exp_vout.in_range(result.vo))
         self.assertTrue(Toleranced(165.0e3, 10.0e3).in_range(result.R_h.resistance))
         self.assertTrue(Toleranced(55.0e3, 10.0e3).in_range(result.R_l.resistance))
