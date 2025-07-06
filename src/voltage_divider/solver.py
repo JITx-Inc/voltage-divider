@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from jitx.toleranced import Toleranced, min_max, tol_exact, tol_percent_symmetric
+from jitx.toleranced import Toleranced
 from jitx_parts.query_api import search_resistors, ExistKeys, DistinctKey
 from jitx_parts.types.main import to_component
 from jitx_parts.types.component import MinMax
@@ -42,13 +42,13 @@ def solve(constraints: VoltageDividerConstraints) -> VoltageDividerSolution:
             raise IncompatibleVinVoutError(constraints.v_in, constraints.v_out)
     goal_r_hi, goal_r_lo = goals
     # Screen the input voltage requirement with perfect resistors
-    vin_screen = constraints.compute_objective(tol_exact(goal_r_hi), tol_exact(goal_r_lo))
+    vin_screen = constraints.compute_objective(Toleranced.exact(goal_r_hi), Toleranced.exact(goal_r_lo))
     if not constraints.is_compliant(vin_screen):
         raise VinRangeTooLargeError(goals, vin_screen)
     # Pre-screen precision series
     pre_screen = []
     for std_prec in constraints.prec_series:
-        vo = constraints.compute_objective(tol_percent_symmetric(goal_r_hi, std_prec), tol_percent_symmetric(goal_r_lo, std_prec))
+        vo = constraints.compute_objective(Toleranced.percent(goal_r_hi, std_prec), Toleranced.percent(goal_r_lo, std_prec))
         pre_screen.append((constraints.is_compliant(vo), std_prec, vo))
     first_valid_series = next((i for i, elem in enumerate(pre_screen) if elem[0]), None)
     if first_valid_series is not None:
@@ -127,7 +127,7 @@ def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: f
     base_query = constraints.base_query
     resistances = search_resistors(
         base_query,
-        resistance=tol_percent_symmetric(goal_r, min_prec),
+        resistance=Toleranced.percent(goal_r, min_prec),
         precision=r_prec,
         exist=exist_keys,
         distinct=distinct_key,
@@ -193,7 +193,7 @@ def tol_minmax(typ: float, tolerance: MinMax) -> Toleranced:
       coeff = min-max(1.0 + min(tolerance), 1.0 + max(tolerance))
       v * coeff
     """
-    coeff = min_max(1.0 + tolerance.min, 1.0 + tolerance.max)
+    coeff = Toleranced.min_max(1.0 + tolerance.min, 1.0 + tolerance.max)
     return typ * coeff
 
 def compute_tcr_deviation(resistor: Resistor, temperature: float) -> Optional[Toleranced]:
@@ -202,7 +202,7 @@ def compute_tcr_deviation(resistor: Resistor, temperature: float) -> Optional[To
 
     This function mirrors the Stanza implementation in component-types.stanza:
     - Extracts tcr and reference temperature from the resistor.
-    - Converts pos/neg to a Toleranced interval using min_max.
+    - Converts pos/neg to a Toleranced interval using Toleranced.min_max.
     - Calls compute_tcr_deviation_interval.
     - Returns None if tcr is not present.
 
@@ -216,7 +216,7 @@ def compute_tcr_deviation(resistor: Resistor, temperature: float) -> Optional[To
     # This mirrors the Stanza hack for database issues:
     # See: https://linear.app/jitx/issue/PROD-328/tcr-values-in-database-seem-wrong
     p, n = tcr.pos, tcr.neg
-    tcr_interval = min_max(min(p, n), max(p, n))
+    tcr_interval = Toleranced.min_max(min(p, n), max(p, n))
     return compute_tcr_deviation_interval(tcr_interval, temperature, ref_temp)
 
 def compute_tcr_deviation_interval(tcr: Toleranced, temperature: float, ref_temp: float = 25.0) -> Toleranced:

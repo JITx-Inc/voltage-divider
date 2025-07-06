@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union
 
-from jitx.toleranced import Toleranced, tol_exact, tol_percent_symmetric
+from jitx.toleranced import Toleranced
 from jitx_parts.query_api import ResistorQuery
 
 from .settings import OPERATING_TEMPERATURE
@@ -46,7 +46,7 @@ class VoltageDividerConstraints:
         self.prec_series = sorted(self.prec_series, reverse=True)
         ensure_sources_limits(self.min_sources, self.query_limit)
 
-    def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Toleranced = tol_exact(1.0), lo_dr: Toleranced = tol_exact(1.0)) -> Toleranced:
+    def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Toleranced = Toleranced.exact(1.0), lo_dr: Toleranced = Toleranced.exact(1.0)) -> Toleranced:
         """
         Compute the output objective voltage range as a Toleranced based on resistor features.
         Default: Vobj = V-in * (R-L / (R-H + R-L))
@@ -67,8 +67,8 @@ class VoltageDividerConstraints:
         Compute a loss function for a potential solution.
         Returns a positive value if compliant, or None if not a solution.
         """
-        rh_tol = tol_percent_symmetric(rh, precision)
-        rl_tol = tol_percent_symmetric(rl, precision)
+        rh_tol = Toleranced.percent(rh, precision)
+        rl_tol = Toleranced.percent(rl, precision)
         vo = self.compute_objective(rh_tol, rl_tol)
         if self.is_compliant(vo):
             # This metric is suspect

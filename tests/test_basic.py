@@ -3,7 +3,8 @@ import sys
 import unittest
 
 import jitx.run
-from jitx.toleranced import tol_percent_symmetric, min_max, min_typ_max, tol_symmetric
+import jitx._instantiation
+from jitx.toleranced import Toleranced
 
 from voltage_divider.circuit import voltage_divider_from_constraints
 from voltage_divider.constraints import VoltageDividerConstraints
@@ -18,76 +19,81 @@ class TestVoltageDivider(unittest.TestCase):
         jitx.run.set_websocket_uri("localhost", TestVoltageDivider.port)
 
     def test_basic_solver(self):
-        exp_vout = tol_percent_symmetric(2.5, 5.0)
+        exp_vout = Toleranced.percent(2.5, 5.0)
         cxt = VoltageDividerConstraints(
-            v_in=tol_percent_symmetric(10.0, 1.0),
+            v_in=Toleranced.percent(10.0, 1.0),
             v_out=exp_vout,
             current=50.0e-6,
-            temp_range=min_max(-20.0, 50.0),
+            temp_range=Toleranced.min_max(-20.0, 50.0),
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
         )
         result = solve(cxt)
         self.assertTrue(exp_vout.in_range(result.vo))
-        self.assertTrue(tol_symmetric(165.0e3, 10.0e3).in_range(result.R_h.resistance))
-        self.assertTrue(tol_symmetric(55.0e3, 10.0e3).in_range(result.R_l.resistance))
+        self.assertTrue(Toleranced(165.0e3, 10.0e3).in_range(result.R_h.resistance))
+        self.assertTrue(Toleranced(55.0e3, 10.0e3).in_range(result.R_l.resistance))
 
     def test_fail_case_1(self):
         cxt = VoltageDividerConstraints(
-            v_in=tol_percent_symmetric(10.0, 1.0),
-            v_out=tol_percent_symmetric(12.5, 1.0),
+            v_in=Toleranced.percent(10.0, 1.0),
+            v_out=Toleranced.percent(12.5, 1.0),
             current=50.0e-6,
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
         )
         with self.assertRaises(IncompatibleVinVoutError) as cm:
-            solve(cxt)
+            with jitx._instantiation.instantiation.activate():
+                solve(cxt)
         self.assertIn("Incompatible", str(cm.exception))
 
     def test_fail_case_2(self):
         cxt = VoltageDividerConstraints(
-            v_in=tol_percent_symmetric(10.0, 10.0),
-            v_out=tol_percent_symmetric(2.5, 0.1),
+            v_in=Toleranced.percent(10.0, 10.0),
+            v_out=Toleranced.percent(2.5, 0.1),
             current=50.0e-6,
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
         )
         with self.assertRaises(VinRangeTooLargeError) as cm:
-            solve(cxt)
+            with jitx._instantiation.instantiation.activate():
+                solve(cxt)
         self.assertIn("Range is too large", str(cm.exception))
 
     def test_fail_case_3(self):
         cxt = VoltageDividerConstraints(
-            v_in=tol_percent_symmetric(10.0, 1.0),
-            v_out=tol_percent_symmetric(2.5, 5.0),
+            v_in=Toleranced.percent(10.0, 1.0),
+            v_out=Toleranced.percent(2.5, 5.0),
             current=50.0e-6,
             prec_series=[20.0, 10.0, 5.0],
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
         )
         with self.assertRaises(NoPrecisionSatisfiesConstraintsError) as cm:
-            solve(cxt)
+            with jitx._instantiation.instantiation.activate():
+                solve(cxt)
         self.assertIn("No Precision Series", str(cm.exception))
 
     def test_inverse_divider(self):
-        exp_vout = tol_percent_symmetric(3.3, 2.0)
+        exp_vout = Toleranced.percent(3.3, 2.0)
         cxt = InverseDividerConstraints(
-            v_in=min_typ_max(0.788, 0.8, 0.812),
+            v_in=Toleranced.min_typ_max(0.788, 0.8, 0.812),
             v_out=exp_vout,
             current=50.0e-6,
-            temp_range=min_max(-20.0, 50.0),
+            temp_range=Toleranced.min_max(-20.0, 50.0),
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"])
         )
-        result = solve(cxt)
+        with jitx._instantiation.instantiation.activate():
+            result = solve(cxt)
         self.assertTrue(exp_vout.in_range(result.vo))
-        self.assertTrue(tol_symmetric(45.0e3, 10.0e3).in_range(result.R_h.resistance))
-        self.assertTrue(tol_symmetric(14.0e3, 5.0e3).in_range(result.R_l.resistance))
+        self.assertTrue(Toleranced(45.0e3, 10.0e3).in_range(result.R_h.resistance))
+        self.assertTrue(Toleranced(14.0e3, 5.0e3).in_range(result.R_l.resistance))
 
     def test_inverse_divider_circuit(self):
         cxt = InverseDividerConstraints(
-            v_in=min_typ_max(0.788, 0.8, 0.812),
-            v_out=tol_percent_symmetric(3.3, 2.0),
+            v_in=Toleranced.min_typ_max(0.788, 0.8, 0.812),
+            v_out=Toleranced.percent(3.3, 2.0),
             current=50.0e-6,
-            temp_range=min_max(-20.0, 50.0),
+            temp_range=Toleranced.min_max(-20.0, 50.0),
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"])
         )
-        circuit = voltage_divider_from_constraints(cxt, name="test_inverse_divider_circuit")
+        with jitx._instantiation.instantiation.activate():
+            circuit = voltage_divider_from_constraints(cxt, name="test_inverse_divider_circuit")
         build_design(circuit, "test_inverse_divider_circuit")
 
 def build_design(circuit: jitx.Circuit, design_name: str):
