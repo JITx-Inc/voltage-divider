@@ -15,11 +15,11 @@ pip install -e .
 ### 1. Define Constraints
 
 ```python
-from voltage_divider import VoltageDividerConstraints, Toleranced, tol_percent_symmetric
+from voltage_divider import VoltageDividerConstraints, Toleranced
 
 # Define input and output voltages with tolerances
-v_in = tol_percent_symmetric(10.0, 1.0)   # 10V +/- 1%
-v_out = tol_percent_symmetric(2.5, 5.0)   # 2.5V +/- 5%
+v_in = Toleranced.percent(10.0, 1.0)   # 10V +/- 1%
+v_out = Toleranced.percent(2.5, 5.0)   # 2.5V +/- 5%
 current = 50e-6  # 50uA
 
 cxt = VoltageDividerConstraints(v_in=v_in, v_out=v_out, current=current)
@@ -59,7 +59,7 @@ circuit = forward_divider(v_in, v_out, current, name="QuickDivider")
 from voltage_divider import inverse_divider, Toleranced, min_typ_max
 
 v_in = min_typ_max(0.788, 0.8, 0.812)  # Feedback voltage range
-v_out = tol_percent_symmetric(3.3, 2.0)  # Output voltage +/- 2%
+v_out = Toleranced.percent(3.3, 2.0)  # Output voltage +/- 2%
 current = 50e-6
 
 circuit = inverse_divider(v_in, v_out, current, name="FeedbackDivider")
