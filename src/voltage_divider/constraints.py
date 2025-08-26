@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union
 
 from jitx.toleranced import Toleranced
-from jitx_parts.query_api import ResistorQuery
+from jitxlib.parts import ResistorQuery
 
 from .settings import OPERATING_TEMPERATURE
 

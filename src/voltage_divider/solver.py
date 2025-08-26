@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from jitx.toleranced import Toleranced
-from jitx_parts.query_api import search_resistors, ExistKeys, DistinctKey
-from jitx_parts.types.main import to_component
-from jitx_parts.types.component import MinMax
-from jitx_parts.types.resistor import Resistor
+from jitxlib.parts import search_resistors, ExistKeys, DistinctKey
+from jitxlib.parts.types.main import to_component
+from jitxlib.parts.types.component import MinMax
+from jitxlib.parts.types.resistor import Resistor
 
 from .constraints import VoltageDividerConstraints
 from .errors import (
