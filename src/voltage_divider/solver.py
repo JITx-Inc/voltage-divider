@@ -128,7 +128,7 @@ def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: f
     resistances = search_resistors(
         base_query,
         resistance=Toleranced.percent(goal_r, min_prec),
-        precision=r_prec,
+        precision=r_prec / 100.0,
         exist=exist_keys,
         distinct=distinct_key,
     )
@@ -145,7 +145,7 @@ def query_resistors(constraints: VoltageDividerConstraints, target: float, prec:
     results = search_resistors(
         base_query,
         resistance=target,
-        precision=prec,
+        precision=prec / 100.0,
         exist=exist_keys,
         limit=constraints.min_sources
     )
