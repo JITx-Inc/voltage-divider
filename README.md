@@ -89,7 +89,7 @@ class ExampleDesign(Design) :
 
 - `VoltageDividerConstraints`, `InverseDividerConstraints`: Define the problem.
 - `solve`: Solve for resistor values.
-- `Toleranced`, `tol`, `tol_percent`, etc.: Tolerance helpers.
+- `Toleranced`, `Toleranced.percent`, etc.: Tolerance helpers.
 - `voltage_divider`, `voltage_divider_from_constraints`: Build a circuit from a solution or constraints.
 - `forward_divider`, `inverse_divider`: One-liner helpers for common use cases.
 
