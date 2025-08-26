@@ -1,6 +1,6 @@
 # voltage_divider Python API
 
-A Python package for voltage divider constraint solving and circuit construction, compatible with JITX and the jitx-parts database.
+A Python package for voltage divider constraint solving and circuit construction, compatible with JITX and the jitxlib-parts package.
 
 ## Installation
 
