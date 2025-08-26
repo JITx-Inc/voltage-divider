@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 from jitx.toleranced import Toleranced
-from jitx_parts.query_api import ResistorQuery
+from jitxlib.parts import ResistorQuery
 
 from .constraints import VoltageDividerConstraints, get_default_resistor_query, ensure_sources_limits, STD_PRECS, DEF_MIN_SRCS, DEF_QUERY_LIMIT, DEF_SEARCH_RANGE
 

@@ -5,18 +5,24 @@ import unittest
 import jitx.run
 import jitx._instantiation
 from jitx.toleranced import Toleranced
+from jitx.sample import SampleDesign
 
 from voltage_divider.circuit import voltage_divider_from_constraints
 from voltage_divider.constraints import VoltageDividerConstraints
 from voltage_divider.inverse import InverseDividerConstraints
 from voltage_divider.solver import solve, NoPrecisionSatisfiesConstraintsError, VinRangeTooLargeError, IncompatibleVinVoutError
-from jitx_parts.query_api import ResistorQuery
+from jitxlib.parts import ResistorQuery
 
 class TestVoltageDivider(unittest.TestCase):
     port: int
 
     def setUp(self):
-        jitx.run.set_websocket_uri("localhost", TestVoltageDivider.port)
+        if hasattr(TestVoltageDivider, "port"):
+            jitx.run.set_websocket_uri("localhost", TestVoltageDivider.port)
+
+        import jitxlib.parts.commands
+
+        jitxlib.parts.commands.ALLOW_NO_DESIGN_CONTEXT = True
 
     def test_basic_solver(self):
         exp_vout = Toleranced.percent(2.5, 5.0)
@@ -95,66 +101,42 @@ class TestVoltageDivider(unittest.TestCase):
         )
         with jitx._instantiation.instantiation.activate():
             circuit = voltage_divider_from_constraints(cxt, name="test_inverse_divider_circuit")
-        build_design(circuit, "test_inverse_divider_circuit")
+        build_circuit_from_instance(circuit, "test_inverse_divider_circuit")
 
-def build_design(circuit: jitx.Circuit, design_name: str):
+
+def build_circuit_from_instance(instance: jitx.Circuit, name: str):
+    """Build a design from a circuit instance and send it to the web socket.
+
+    Args:
+        instance: The circuit instance to build the design from
+        name: Design name
+    """
+
+    class TestDesign(SampleDesign):
+        circuit = instance
+
+    TestDesign.__name__ = name
+
+    jitx.run.build(
+        name=name, design=TestDesign, formatter=text_formatter, dump=f"{name}.json"
+    )
+
+
+def build_circuit(circ: type[jitx.Circuit], name: str):
     """Build a design from a component and send it to the web socket.
 
     Args:
-        circuit: The circuit to build the design from
-        design_name: The name of the design
+        circ: The circuit class to build the design from
+        name: Design name
     """
 
-    class QueryStackup(jitx.stackup.Stackup):
-        layers = [
-            jitx.stackup.Layer(jitx.stackup.Dielectric(), thickness=0.1),
-            jitx.stackup.Layer(jitx.stackup.Conductor(), thickness=0.1),
-            jitx.stackup.Layer(jitx.stackup.Dielectric(), thickness=0.1),
-            jitx.stackup.Layer(jitx.stackup.Conductor(), thickness=0.1),
-            jitx.stackup.Layer(jitx.stackup.Dielectric(), thickness=0.1),
-        ]
+    class TestDesign(SampleDesign):
+        circuit = circ()
 
-    class QueryRules(jitx.substrate.FabricationConstraints):
-        min_copper_width = 0.127
-        min_copper_copper_space = 0.127
-        min_copper_hole_space = 0.127
-        min_copper_edge_space = 0.127
-
-        min_annular_ring = 0.127
-        min_drill_diameter = 0.127
-        min_silkscreen_width = 0.127
-        min_pitch_leaded = 0.127
-        min_pitch_bga = 0.127
-
-        max_board_width = 0.127
-        max_board_height = 0.127
-
-        min_silk_solder_mask_space = 0.127
-        min_silkscreen_text_height = 0.127
-        solder_mask_registration = 0.127
-        min_soldermask_opening = 0.127
-        min_soldermask_bridge = 0.127
-
-        min_th_pad_expand_outer = 0.127
-        min_hole_to_hole = 0.127
-        min_pth_pin_solder_clearance = 0.127
-
-    class QuerySubstrate(jitx.substrate.Substrate):
-        stackup = QueryStackup()
-        rules = QueryRules()
-
-    class QueryBoard(jitx.Board):
-        shape = jitx.shapes.primitive.Circle(radius=5)
-
-    # Create a dynamic class name based on the component name
-    DesignClass = type(
-        f"{design_name}",
-        (jitx.Design,),
-        {"substrate": QuerySubstrate(), "board": QueryBoard(), "main": circuit},
-    )
+    TestDesign.__name__ = name
 
     jitx.run.build(
-        name=design_name, design=DesignClass, formatter=text_formatter, dump=f"{design_name}.json"
+        name=name, design=TestDesign, formatter=text_formatter, dump=f"{name}.json"
     )
 
 def text_formatter(ob, file=sys.stdout, indent=0):
