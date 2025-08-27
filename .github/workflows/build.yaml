@@ -30,8 +30,31 @@ jobs:
 
     steps:
 
+      # since this repo is public and the action repo is not,
+      # we must check out the action repo with a valid token
+      # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-using-an-action-inside-a-different-private-repository-than-the-workflow
+      # set up token and permissions
+      - name: Generate an app token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          owner: "JITX-Inc"
+          # repositories: # unset means all when specifying "owner"
+          app-id: ${{ vars.GITHUBAPP_ID }}
+          private-key: ${{ secrets.GITHUBAPP_PRIVATE_KEY }}
+          permission-contents: write  # for committing content to a repo
+          permission-actions: read    # for reading artifacts from actions
+
+      - name: Check out Action repository
+        uses: actions/checkout@v4
+        with:
+          repository: jitx-inc/pybuild-action
+          ref: v1
+          token: ${{ steps.app-token.outputs.token }}
+          path: ./.github/actions/pybuild-action
+
       - name: Build, Test, and Deploy
-        uses: jitx-inc/pybuild-action@v1
+        uses: ./.github/actions/pybuild-action
         with:
            python-version: "${{ matrix.python-version }}"
            run-publish: true
