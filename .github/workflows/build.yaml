@@ -1,0 +1,42 @@
+
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - python
+  pull_request:
+    branches:
+      - main
+      - dev
+      - python
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write     # to be able to check out repos and generate app tokens
+      actions: write      # to be able to trigger other workflows
+
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+      fail-fast: false
+
+    steps:
+
+      - name: Build, Test, and Deploy
+        uses: jitx-inc/pybuild-action@v1
+        with:
+           python-version: "${{ matrix.python-version }}"
+           run-publish: true
+           hatch-index-user: ${{ vars.HATCH_INDEX_USER }}
+           hatch-index-auth: ${{ secrets.HATCH_INDEX_AUTH }}
+           notify-slack: true
+           slack-token: ${{ secrets.SLACK_TOKEN }}
+           github-user: ${{ github.actor }}

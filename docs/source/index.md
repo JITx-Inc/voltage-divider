@@ -8,5 +8,5 @@ Add your content here
 :maxdepth: 3
 :caption: Contents:
 
-api/voltage-divider/modules
+jitxlib/modules
 ```
