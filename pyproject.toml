@@ -110,6 +110,15 @@ ignore = ["E501", "A005", "C901", "A002"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+
+[tool.pyright]
+typeCheckingMode = "basic"
+reportMissingImports = "warning"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jitxlib"]
 
 #[tool.hatch.build.targets.wheel.hooks.sphinx]
 #dependencies = [
