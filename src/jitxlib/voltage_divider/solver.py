@@ -3,9 +3,9 @@ from typing import List, Optional
 
 from jitx.toleranced import Toleranced
 from jitxlib.parts import search_resistors, ExistKeys, DistinctKey
-from jitxlib.parts.types.main import to_component, PartJSON
-from jitxlib.parts.types.component import MinMax
-from jitxlib.parts.types.resistor import Resistor
+from jitxlib.parts._types.main import to_component, PartJSON
+from jitxlib.parts._types.component import MinMax
+from jitxlib.parts._types.resistor import Resistor
 
 from .constraints import VoltageDividerConstraints
 from .errors import (
