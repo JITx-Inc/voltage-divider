@@ -118,6 +118,10 @@ class TestVoltageDivider(unittest.TestCase):
             )
         build_circuit_from_instance(circuit, "test_inverse_divider_circuit")
 
+    # All tests above are integration tests. Here is an example test that actually runs in CI.
+    def test_example_unit_test(self):
+        self.assertTrue(True)
+
 
 def build_circuit_from_instance(instance: jitx.Circuit, name: str):
     """Build a design from a circuit instance and send it to the web socket.
