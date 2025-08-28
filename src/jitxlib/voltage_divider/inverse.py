@@ -1,21 +1,15 @@
-from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Tuple
 
 from jitx.toleranced import Toleranced
 from jitxlib.parts import ResistorQuery
 
 from .constraints import (
     VoltageDividerConstraints,
-    get_default_resistor_query,
     ensure_sources_limits,
-    STD_PRECS,
-    DEF_MIN_SRCS,
-    DEF_QUERY_LIMIT,
-    DEF_SEARCH_RANGE,
 )
 
 
-@dataclass
 class InverseDividerConstraints(VoltageDividerConstraints):
     """
     Inverse Voltage Divider Constraints
@@ -76,10 +70,6 @@ class InverseDividerConstraints(VoltageDividerConstraints):
                     in the base query will be ignored for those keys.
 
     """
-
-    def __post_init__(self):
-        self.prec_series = sorted(self.prec_series, reverse=True)
-        ensure_sources_limits(self.min_sources, self.query_limit)
 
     def compute_objective(
         self,
