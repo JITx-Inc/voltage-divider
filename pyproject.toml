@@ -14,14 +14,13 @@ build-backend = "hatchling.build"
 
 
 [project]
-name = "voltage_divider"
+name = "jitxlib-voltage-divider"
 dynamic = ["version"]
 dependencies = [
-  #"jitxcore>=0.1.dev,<0.2.0",
-  #"websockets==15.0.1",
   "ruff==0.11.2",
   "pyright>=1.1.398,<1.2.0",
-  #"shapely>=2.1.0,<3.0",
+  "jitx>=0.1.dev,<0.2.0",
+  "jitxlib-parts>=0.1.dev,<0.2.0"
 ]
 requires-python = ">=3.12"
 authors = [
@@ -30,7 +29,7 @@ authors = [
 maintainers = [
   {name = "JITX"}
 ]
-description = "voltage-divider"
+description = "JITX Voltage Divider Solver"
 keywords = ["jitx", "pcb", "voltage divider"]
 
 classifiers = [
@@ -60,11 +59,11 @@ Documentation = "https://docs.jitx.com"
 
 [tool]
 
-#[tool.hatch.envs.default.env-vars]
-#PIP_INDEX_URL = "https://pypi.jitx.com/jitx/unstable/+simple"
+[tool.hatch.envs.default.env-vars]
+PIP_INDEX_URL = "https://pypi.jitx.com/jitx/main/+simple"
 
-#[tool.hatch.envs.hatch-test.env-vars]
-#PIP_INDEX_URL = "https://pypi.jitx.com/jitx/unstable/+simple"
+[tool.hatch.envs.hatch-test.env-vars]
+PIP_INDEX_URL = "https://pypi.jitx.com/jitx/main/+simple"
 
 # tests: run "hatch test --cover"
 [tool.hatch.envs.test]
@@ -120,26 +119,30 @@ indent-style = "space"
 
 [[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
 tool = "apidoc"
-source = "../src"
-out_dir = "source/api/voltage-divider"
+source = "../src/jitxlib"
+out_dir = "source/jitxlib"
 depth = 4
-header = "JITX voltage-divider Documentation"
+header = "JITX Voltage Divider Documentation"
+# "--implicit-namespaces" required for namespace-only components in the package path, like src/jitxlib/parts
+tool_apidoc = ["python", "-m", "sphinx.ext.apidoc", "--implicit-namespaces"]
 
 [[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
 tool = "build"
 format = "html"
 source = "source"
 out_dir = "build"
+sphinx_opts = "--jobs auto --write-all --fresh-env --warning-file build.out"
 
 [[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
 tool = "custom"
 out_dir = "build"
 shell = true
 commands = [
+  #"! grep ERROR: build.out  # fail if there are any ERROR: lines in docs/build.out",
   "mkdir -p ../dist",
   "pwd",
   "ls -la",
-  "tar jcf ../dist/voltage_divider-docs-$(hatch version).tar.bz2 -C build ."
+  "tar jcf ../dist/jitxlib-voltage_divider-docs-$(hatch version).tar.bz2 -C build ."
 ]
 
 # pyright: run "hatch run types:check"

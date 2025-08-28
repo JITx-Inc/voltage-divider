@@ -1,0 +1,210 @@
+
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - python
+  pull_request:
+    branches:
+      - main
+      - dev
+      - python
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write     # to be able to check out repos and generate app tokens
+      actions: write      # to be able to trigger other workflows
+
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history so hatch can properly calculate version from git tags
+          #   "UserWarning: <path> is shallow and may cause errors"
+          #   https://github.com/pypa/setuptools-scm/issues/414
+          #   https://github.com/pypa/setuptools-scm/issues/431
+          #   https://github.com/actions/checkout/issues/249
+          fetch-depth: 0
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up pip cache
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Display contents of pip cache
+        run: ls -l ~/.cache/pip/* || true
+
+      - name: Install Hatch
+        uses: pypa/hatch@a3c83ab3d481fbc2dc91dd0088628817488dd1d5
+        with:
+          version: 1.14.0
+
+      - name: Record version from hatch
+        run: |
+          mkdir -p dist
+          hatch version | tee dist/version
+
+      - name: Run linter
+        run: |
+          hatch env run -e hatch-static-analysis pip list
+          hatch fmt --check
+
+      - name: Run type checker
+        if: success() || failure()
+        run: |
+          set +e  # dont exit on failure so we can capture results
+          # capture and display stdout and stderr
+          hatch env run -e types pip list
+          hatch run types:check > >(tee typecheck.log) 2> >(tee typecheck.err >&2)
+          RESULT=$?
+          ICON=':x:'
+          [ $RESULT == 0 ] && ICON=':white_check_mark:'
+          echo "${ICON} ${{ github.event.repository.name }} type checker results for python ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY || true
+          head -20 typecheck.log >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY || true
+          cp "$GITHUB_STEP_SUMMARY" .github.step.summary.typecheck.log
+          exit $RESULT
+
+      - name: Run tests
+        if: success() || failure()
+        run: |
+          set +e  # dont exit on failure so we can capture results
+          # capture and display stdout and stderr
+          hatch env run -e test -i python=${{ matrix.python-version }} pip list
+          hatch test -py ${{ matrix.python-version }} --cover > >(tee test.log) 2> >(tee test.err >&2)
+          RESULT=$?
+          ICON=':x:'
+          [ $RESULT == 0 ] && ICON=':white_check_mark:'
+          echo "${ICON} ${{ github.event.repository.name }} test results for python ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY || true
+          grep -A20 test.summary test.log >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY || true
+          cp "$GITHUB_STEP_SUMMARY" .github.step.summary.test.log
+          exit $RESULT
+
+      - name: Build dist files
+        if: success() || failure()
+        run: |
+          set +e  # dont exit on failure so we can capture results
+          # capture and display stdout and stderr
+          hatch env run -e hatch-build pip list
+          hatch build > >(tee build.log) 2> >(tee build.err >&2)
+          RESULT=$?
+          ICON=':x:'
+          [ $RESULT == 0 ] && ICON=':white_check_mark:'
+          echo "${ICON} ${{ github.repository }} build results" >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY || true
+          head -20 build.err >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY || true
+          cp "$GITHUB_STEP_SUMMARY" .github.step.summary.build.log
+          exit $RESULT
+
+      - name: Publish on pypi.jitx.com/jitx/main
+        if: ${{ matrix.python-version == '3.12' }} # only upload one build version
+        env:
+          HATCH_INDEX_REPO: https://pypi.jitx.com/jitx/main
+          HATCH_INDEX_USER: ${{ vars.HATCH_INDEX_USER  }}
+          HATCH_INDEX_AUTH: ${{ secrets.HATCH_INDEX_AUTH  }}
+        run: |
+          set +e  # dont exit on failure so we can capture results
+          # capture and display stdout and stderr
+          hatch publish > >(tee publish.log) 2> >(tee publish.err >&2)
+          RESULT=$?
+          ICON=':x:'
+          [ $RESULT == 0 ] && ICON=':white_check_mark:'
+          echo "${ICON} ${{ github.repository }} publish results" >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY || true
+          grep -A20 '^\[' publish.log >> $GITHUB_STEP_SUMMARY || true
+          head -20 publish.err >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY || true
+          cp "$GITHUB_STEP_SUMMARY" .github.step.summary.publish.log
+          exit $RESULT
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheel-${{ matrix.python-version }}
+          compression-level: 0
+          path: dist/*.whl
+
+      - name: Upload version artifact
+        if: ${{ matrix.python-version == '3.12' }} # only upload one build version
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-version-${{ matrix.python-version }}
+          compression-level: 0
+          path: dist/version
+
+      - name: Upload sdist artifact
+        if: ${{ matrix.python-version == '3.12' }} # only upload one build version
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-sdist-${{ matrix.python-version }}
+          compression-level: 0
+          path: dist/*.tar.gz
+
+      - name: Upload docs artifact
+        if: ${{ matrix.python-version == '3.12' }} # only upload one build version
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-docs-${{ matrix.python-version }}
+          compression-level: 0
+          path: dist/*.tar.bz2
+
+      # # set up token and permissions for triggering deploy
+      # - name: Generate an app token
+      #   id: app-token
+      #   uses: actions/create-github-app-token@v2
+      #   with:
+      #     owner: "JITX-Inc"
+      #     # repositories: # unset means all when specifying "owner"
+      #     app-id: ${{ vars.GITHUBAPP_ID }}
+      #     private-key: ${{ secrets.GITHUBAPP_PRIVATE_KEY }}
+      #     permission-actions: write   # for triggering actions
+
+      # - name: Trigger jitx-doc:sphinx deploy
+      #   env:
+      #     GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      #   run: |
+      #     gh workflow run ps_pr_build.yaml -R jitx-inc/jitx-doc --ref sphinx
+
+      - name: Notify user on Slack
+        if: failure()
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          export GHLOGTYPE="$(cat .github.step.summary.typecheck.log 2>/dev/null || echo '')"
+          export GHLOGTEST="$(cat .github.step.summary.test.log 2>/dev/null || echo '')"
+          export GHLOGBUILD="$(cat .github.step.summary.build.log 2>/dev/null || echo '')"
+          export GHLOGPUBLISH="$(cat .github.step.summary.publish.log 2>/dev/null || echo '')"
+          export GHUSER="${{ github.actor }}"
+          export RESULT="${{ job.status }}"
+          export DESC="${{ github.event.repository.name }} ${{ job.status }}"
+          export VER="${{ github.sha }}"
+          export BRANCH="${{ github.ref }}"
+          export URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          JSONFILE=`mktemp -p .`
+          .github/slack-template.bash > "${JSONFILE}"
+          .github/slack-message.bash -u "${GHUSER}" -j "${JSONFILE}" "" || (cat "${JSONFILE}" ; true)
