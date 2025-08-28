@@ -15,14 +15,17 @@ from .errors import (
     NoSolutionFoundError,
 )
 
+
 @dataclass
 class VoltageDividerSolution:
     """
     Voltage Divider Solution Type
     """
+
     R_h: Resistor
     R_l: Resistor
     vo: Toleranced
+
 
 @dataclass
 class Ratio:
@@ -42,13 +45,18 @@ def solve(constraints: VoltageDividerConstraints) -> VoltageDividerSolution:
             raise IncompatibleVinVoutError(constraints.v_in, constraints.v_out)
     goal_r_hi, goal_r_lo = goals
     # Screen the input voltage requirement with perfect resistors
-    vin_screen = constraints.compute_objective(Toleranced.exact(goal_r_hi), Toleranced.exact(goal_r_lo))
+    vin_screen = constraints.compute_objective(
+        Toleranced.exact(goal_r_hi), Toleranced.exact(goal_r_lo)
+    )
     if not constraints.is_compliant(vin_screen):
         raise VinRangeTooLargeError(goals, vin_screen)
     # Pre-screen precision series
     pre_screen = []
     for std_prec in constraints.prec_series:
-        vo = constraints.compute_objective(Toleranced.percent(goal_r_hi, std_prec), Toleranced.percent(goal_r_lo, std_prec))
+        vo = constraints.compute_objective(
+            Toleranced.percent(goal_r_hi, std_prec),
+            Toleranced.percent(goal_r_lo, std_prec),
+        )
         pre_screen.append((constraints.is_compliant(vo), std_prec, vo))
     first_valid_series = next((i for i, elem in enumerate(pre_screen) if elem[0]), None)
     if first_valid_series is not None:
@@ -61,9 +69,14 @@ def solve(constraints: VoltageDividerConstraints) -> VoltageDividerSolution:
         sol = solve_over_series(constraints, std_prec, search_prec)
         if sol is not None:
             return sol
-    raise NoSolutionFoundError("Failed to Source Resistors to Satisfy Voltage Divider Constraints")
+    raise NoSolutionFoundError(
+        "Failed to Source Resistors to Satisfy Voltage Divider Constraints"
+    )
 
-def solve_over_series(constraints: VoltageDividerConstraints, precision: float, search_prec: float) -> Optional[VoltageDividerSolution]:
+
+def solve_over_series(
+    constraints: VoltageDividerConstraints, precision: float, search_prec: float
+) -> Optional[VoltageDividerSolution]:
     goal_r_hi, goal_r_lo = constraints.compute_initial_guess()
     hi_res = query_resistance_by_values(constraints, goal_r_hi, precision, search_prec)
     lo_res = query_resistance_by_values(constraints, goal_r_lo, precision, search_prec)
@@ -73,13 +86,18 @@ def solve_over_series(constraints: VoltageDividerConstraints, precision: float, 
             return sol
     return None
 
-def filter_query_results(constraints: VoltageDividerConstraints, ratio: Ratio, precision: float) -> Optional[VoltageDividerSolution]:
+
+def filter_query_results(
+    constraints: VoltageDividerConstraints, ratio: Ratio, precision: float
+) -> Optional[VoltageDividerSolution]:
     print(f"    - Querying resistors for R-h={ratio.high}Ω R-l={ratio.low}Ω")
     r_his = query_resistors(constraints, ratio.high, precision)
     r_los = query_resistors(constraints, ratio.low, precision)
     min_srcs = constraints.min_sources
     if len(r_his) < min_srcs or len(r_los) < min_srcs:
-        print(f"      Ignoring: there must be at least {min_srcs} resistors of each type")
+        print(
+            f"      Ignoring: there must be at least {min_srcs} resistors of each type"
+        )
         return None
     r_hi_cmp = r_his[0]
     r_lo_cmp = r_los[0]
@@ -88,8 +106,10 @@ def filter_query_results(constraints: VoltageDividerConstraints, ratio: Ratio, p
     is_valid = all(vo_valids)
     if not is_valid:
         print(f"      Ignoring: not a solution when taking into account TCRs.")
+
         def fmt(ok, vo):
             return "OK" if ok else f"FAIL ({vo} V)"
+
         print(f"        min-temp: {fmt(vo_valids[0], vo_set[0])}")
         print(f"        max-temp: {fmt(vo_valids[1], vo_set[1])}")
         return None
@@ -102,11 +122,19 @@ def filter_query_results(constraints: VoltageDividerConstraints, ratio: Ratio, p
     try:
         current = vo_set[0].typ / ratio.low
     except Exception:
-        current = 'unknown'
-    print(f"      Solved: mpn1={mpn1}, mpn2={mpn2}, v-out={vout_str}, current={current}A")
+        current = "unknown"
+    print(
+        f"      Solved: mpn1={mpn1}, mpn2={mpn2}, v-out={vout_str}, current={current}A"
+    )
     return VoltageDividerSolution(r_hi_cmp, r_lo_cmp, worst_case_vo)
 
-def sort_pairs_by_best_fit(constraints: VoltageDividerConstraints, precision: float, hi_res: List[float], lo_res: List[float]) -> List[Ratio]:
+
+def sort_pairs_by_best_fit(
+    constraints: VoltageDividerConstraints,
+    precision: float,
+    hi_res: List[float],
+    lo_res: List[float],
+) -> List[Ratio]:
     ratios = []
     for rh in hi_res:
         for rl in lo_res:
@@ -116,7 +144,13 @@ def sort_pairs_by_best_fit(constraints: VoltageDividerConstraints, precision: fl
     ratios.sort(key=lambda r: r.loss)
     return ratios
 
-def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: float, r_prec: float, min_prec: float) -> List[float]:
+
+def query_resistance_by_values(
+    constraints: VoltageDividerConstraints,
+    goal_r: float,
+    r_prec: float,
+    min_prec: float,
+) -> List[float]:
     """
     Query for resistance values within the specified precision range using search_resistors.
     Returns a list of resistance values (float).
@@ -135,7 +169,10 @@ def query_resistance_by_values(constraints: VoltageDividerConstraints, goal_r: f
     # Case from int to float (mimic stanza codebase, the database is sensitive to the difference, maybe due to caching).
     return [float(r) for r in resistances]
 
-def query_resistors(constraints: VoltageDividerConstraints, target: float, prec: float) -> List[Resistor]:
+
+def query_resistors(
+    constraints: VoltageDividerConstraints, target: float, prec: float
+) -> List[Resistor]:
     """
     Query for resistors matching a particular target resistance and precision.
     Returns a list of Resistor objects.
@@ -147,23 +184,37 @@ def query_resistors(constraints: VoltageDividerConstraints, target: float, prec:
         resistance=target,
         precision=prec / 100.0,
         exist=exist_keys,
-        limit=constraints.min_sources
+        limit=constraints.min_sources,
     )
     # Convert results to Resistor objects
     return [to_component(r) for r in results]
 
-def study_solution(constraints: VoltageDividerConstraints, r_hi: Resistor, r_lo: Resistor, temp_range: Toleranced) -> List[Toleranced]:
+
+def study_solution(
+    constraints: VoltageDividerConstraints,
+    r_hi: Resistor,
+    r_lo: Resistor,
+    temp_range: Toleranced,
+) -> List[Toleranced]:
     """
     Compute the voltage divider expected output over a temperature range.
     Returns a list of Toleranced values for [min_temp, max_temp].
     """
 
-    if r_lo.resistance == 0.0 and r_hi.resistance == 0.0 :
-        raise ValueError(f"Can't check output voltage current for a solution with two zero ohm resistors {r_lo.mpn} and {r_hi.mpn}.")
+    if r_lo.resistance == 0.0 and r_hi.resistance == 0.0:
+        raise ValueError(
+            f"Can't check output voltage current for a solution with two zero ohm resistors {r_lo.mpn} and {r_hi.mpn}."
+        )
 
     # Compute TCR deviations for min and max temperature
-    lo_drs = [compute_tcr_deviation(r_lo, temp_range.min_value), compute_tcr_deviation(r_lo, temp_range.max_value)]
-    hi_drs = [compute_tcr_deviation(r_hi, temp_range.min_value), compute_tcr_deviation(r_hi, temp_range.max_value)]
+    lo_drs = [
+        compute_tcr_deviation(r_lo, temp_range.min_value),
+        compute_tcr_deviation(r_lo, temp_range.max_value),
+    ]
+    hi_drs = [
+        compute_tcr_deviation(r_hi, temp_range.min_value),
+        compute_tcr_deviation(r_hi, temp_range.max_value),
+    ]
     r_lo_val = get_resistance(r_lo)
     r_hi_val = get_resistance(r_hi)
     results = []
@@ -175,6 +226,7 @@ def study_solution(constraints: VoltageDividerConstraints, r_hi: Resistor, r_lo:
             raise ValueError("No TCR Data")
     return results
 
+
 def get_resistance(r: Resistor) -> Toleranced:
     """
     Get the resistance value as a Toleranced.
@@ -182,8 +234,11 @@ def get_resistance(r: Resistor) -> Toleranced:
     Raises an error if tolerance is None. Always expects MinMax for tolerance.
     """
     if r.tolerance is None:
-        raise ValueError("Resistor tolerance must be specified (MinMax). None is not allowed.")
+        raise ValueError(
+            "Resistor tolerance must be specified (MinMax). None is not allowed."
+        )
     return tol_minmax(r.resistance, r.tolerance)
+
 
 def tol_minmax(typ: float, tolerance: MinMax) -> Toleranced:
     """
@@ -196,7 +251,10 @@ def tol_minmax(typ: float, tolerance: MinMax) -> Toleranced:
     coeff = Toleranced.min_max(1.0 + tolerance.min, 1.0 + tolerance.max)
     return typ * coeff
 
-def compute_tcr_deviation(resistor: Resistor, temperature: float) -> Optional[Toleranced]:
+
+def compute_tcr_deviation(
+    resistor: Resistor, temperature: float
+) -> Optional[Toleranced]:
     """
     Compute the expected deviation window of a given resistor at a given temperature.
 
@@ -219,7 +277,10 @@ def compute_tcr_deviation(resistor: Resistor, temperature: float) -> Optional[To
     tcr_interval = Toleranced.min_max(min(p, n), max(p, n))
     return compute_tcr_deviation_interval(tcr_interval, temperature, ref_temp)
 
-def compute_tcr_deviation_interval(tcr: Toleranced, temperature: float, ref_temp: float = 25.0) -> Toleranced:
+
+def compute_tcr_deviation_interval(
+    tcr: Toleranced, temperature: float, ref_temp: float = 25.0
+) -> Toleranced:
     """
     Compute the expected deviation window of a given temperature coefficient.
 

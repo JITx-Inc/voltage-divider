@@ -31,12 +31,10 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx_autodoc_typehints",
 ]
-myst_enable_extensions = [
-    "colon_fence"
-]
+myst_enable_extensions = ["colon_fence"]
 myst_links_external_new_tab = True
 
-source_suffix = ['.rst', '.md']
+source_suffix = [".rst", ".md"]
 html_static_path = ["_static"]
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -44,12 +42,12 @@ exclude_patterns = []
 language = "en"
 html_show_sphinx = False
 keep_warnings = True  # keep warnings in rendered documents - disable for prod release
-nitpicky = True       # extra warnings
+nitpicky = True  # extra warnings
 
 latex_engine = "xelatex"
-#latex_logo = "images/favicon.png"
+# latex_logo = "images/favicon.png"
 latex_elements = {
-    'fontpkg': '''
+    "fontpkg": """
 \\setmainfont{FreeSerif}[
   UprightFont    = *,
   ItalicFont     = *Italic,
@@ -68,19 +66,19 @@ latex_elements = {
   BoldFont       = *Bold,
   BoldItalicFont = *BoldOblique,
 ]
-''',
+""",
 }
 
 html_theme = "pydata_sphinx_theme"
 html_theme_options = {
-    #"announcement": "This is an annoucement",
-    #"show_version_warning_banner": True,
-    #"logo": {
+    # "announcement": "This is an annoucement",
+    # "show_version_warning_banner": True,
+    # "logo": {
     #    "alt_text": "JITX Documentation - Home",
     #    "image_light": "images/docs_jitx_logo_light.svg",
     #    "image_dark": "images/docs_jitx_logo_dark.svg",
-    #},
-    #"content_footer_items": ["last-updated"],
+    # },
+    # "content_footer_items": ["last-updated"],
     "show_nav_level": 1,
     "navigation_depth": 6,
     "show_toc_level": 4,  # right sidebar
