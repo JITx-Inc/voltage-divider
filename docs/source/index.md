@@ -1,5 +1,5 @@
 
-# voltage_divider documentation
+# jitxlib-voltage-divider documentation
 
 Add your content here
 

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from jitxlib.parts import Resistor
+from jitx.component import Component
 from jitx.circuit import Circuit
 from jitx.inspect import decompose
 from jitx.net import Net, Port
@@ -22,8 +22,9 @@ class VoltageDividerCircuit(Circuit):
     hi: Port
     out: Port
     lo: Port
-    r_hi: Resistor
-    r_lo: Resistor
+    # Make those jitxlib.parts.Resistors for typed attribute accessing.
+    r_hi: Component
+    r_lo: Component
     nets: list[Net]
     output_voltage: Toleranced
 
