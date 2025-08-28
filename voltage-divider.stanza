@@ -1,6 +1,0 @@
-defpackage voltage-divider:
-  forward voltage-divider/solver
-  forward voltage-divider/errors
-  forward voltage-divider/constraints
-  forward voltage-divider/inverse
-  forward voltage-divider/circuits
