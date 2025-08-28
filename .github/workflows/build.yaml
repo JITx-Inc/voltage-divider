@@ -44,6 +44,9 @@ jobs:
           private-key: ${{ secrets.GITHUBAPP_PRIVATE_KEY }}
           permission-contents: write  # for committing content to a repo
           permission-actions: read    # for reading artifacts from actions
+          repositories: |
+            pybuild-action
+            voltage-divider
 
       - name: Check out Action repository
         uses: actions/checkout@v4
