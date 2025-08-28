@@ -1,6 +1,7 @@
 import argparse
 import sys
 import unittest
+import pytest
 
 import jitx.run
 import jitx._instantiation
@@ -30,6 +31,7 @@ class TestVoltageDivider(unittest.TestCase):
 
         jitxlib.parts.commands.ALLOW_NO_DESIGN_CONTEXT = True
 
+    @pytest.mark.integration
     def test_basic_solver(self):
         exp_vout = Toleranced.percent(2.5, 5.0)
         cxt = VoltageDividerConstraints(
@@ -45,6 +47,7 @@ class TestVoltageDivider(unittest.TestCase):
         self.assertTrue(Toleranced(165.0e3, 10.0e3).in_range(result.R_h.resistance))
         self.assertTrue(Toleranced(55.0e3, 10.0e3).in_range(result.R_l.resistance))
 
+    @pytest.mark.integration
     def test_fail_case_1(self):
         cxt = VoltageDividerConstraints(
             v_in=Toleranced.percent(10.0, 1.0),
@@ -57,6 +60,7 @@ class TestVoltageDivider(unittest.TestCase):
                 solve(cxt)
         self.assertIn("Incompatible", str(cm.exception))
 
+    @pytest.mark.integration
     def test_fail_case_2(self):
         cxt = VoltageDividerConstraints(
             v_in=Toleranced.percent(10.0, 10.0),
@@ -69,6 +73,7 @@ class TestVoltageDivider(unittest.TestCase):
                 solve(cxt)
         self.assertIn("Range is too large", str(cm.exception))
 
+    @pytest.mark.integration
     def test_fail_case_3(self):
         cxt = VoltageDividerConstraints(
             v_in=Toleranced.percent(10.0, 1.0),
@@ -82,6 +87,7 @@ class TestVoltageDivider(unittest.TestCase):
                 solve(cxt)
         self.assertIn("No Precision Series", str(cm.exception))
 
+    @pytest.mark.integration
     def test_inverse_divider(self):
         exp_vout = Toleranced.percent(3.3, 2.0)
         cxt = InverseDividerConstraints(
@@ -97,6 +103,7 @@ class TestVoltageDivider(unittest.TestCase):
         self.assertTrue(Toleranced(45.0e3, 10.0e3).in_range(result.R_h.resistance))
         self.assertTrue(Toleranced(14.0e3, 5.0e3).in_range(result.R_l.resistance))
 
+    @pytest.mark.integration
     def test_inverse_divider_circuit(self):
         cxt = InverseDividerConstraints(
             v_in=Toleranced.min_typ_max(0.788, 0.8, 0.812),
