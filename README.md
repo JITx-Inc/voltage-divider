@@ -1,13 +1,12 @@
-# voltage_divider Python API
+# jitxlib-voltage-divider Python API
 
 A Python package for voltage divider constraint solving and circuit construction, compatible with JITX and the jitxlib-parts package.
 
 ## Installation
 
-Install via pip (after cloning this repo and its dependencies):
-
+Install via pip:
 ```bash
-pip install -e .
+pip install jitxlib-voltage-divider
 ```
 
 ## Usage
@@ -15,7 +14,7 @@ pip install -e .
 ### 1. Define Constraints
 
 ```python
-from voltage_divider import VoltageDividerConstraints
+from jitxlib.voltage_divider import VoltageDividerConstraints
 from jitx.toleranced import Toleranced
 
 # Define input and output voltages with tolerances
@@ -33,7 +32,7 @@ Queried parts are cached and can be locked / unlocked per design from the BOM Vi
 
 ```python
 from jitx.design import Design
-from voltage_divider import solve
+from jitxlib.voltage_divider import solve
 
 class ExampleDesign(Design) :
     def __init__(self) :
@@ -49,7 +48,7 @@ Run JITX Design.
 
 ```python
 from jitx.design import Design
-from voltage_divider import voltage_divider
+from jitxlib.voltage_divider import voltage_divider
 
 class ExampleDesign(Design) :
     def __init__(self) :
@@ -63,7 +62,7 @@ Run JITX Design.
 
 ```python
 from jitx.design import Design
-from voltage_divider import forward_divider
+from jitxlib.voltage_divider import forward_divider
 
 class ExampleDesign(Design) :
     def __init__(self) :
@@ -74,7 +73,7 @@ class ExampleDesign(Design) :
 
 ```python
 from jitx.design import Design
-from voltage_divider import inverse_divider, Toleranced, min_typ_max
+from jitxlib.voltage_divider import inverse_divider, Toleranced, min_typ_max
 
 
 class ExampleDesign(Design) :
