@@ -5,7 +5,6 @@
 
 # Add jitx source to import path
 import sys
-import os
 from pathlib import Path
 
 sys.path.insert(0, str(Path("..", "..", "src").resolve()))

@@ -11,6 +11,7 @@ STD_PRECS = [20.0, 10.0, 5.0, 2.0, 1.0, 0.5, 0.25, 0.1]  # Percentages, unitless
 DEF_MIN_SRCS = 3
 DEF_QUERY_LIMIT = 50
 DEF_SEARCH_RANGE = 10.0  # Percent, unitless
+DEF_DELTA_RESISTANCE = Toleranced.exact(1.0)
 
 
 # Helper for default resistor query
@@ -104,8 +105,8 @@ class VoltageDividerConstraints:
         self,
         rh: Toleranced,
         rl: Toleranced,
-        hi_dr: Toleranced = Toleranced.exact(1.0),
-        lo_dr: Toleranced = Toleranced.exact(1.0),
+        hi_dr: Toleranced = DEF_DELTA_RESISTANCE,
+        lo_dr: Toleranced = DEF_DELTA_RESISTANCE,
     ) -> Toleranced:
         """
         This function computes the objective as the forward voltage of the

@@ -132,7 +132,7 @@ source = "../src/jitxlib"
 out_dir = "source/jitxlib"
 depth = 4
 header = "JITX Voltage Divider Documentation"
-# "--implicit-namespaces" required for namespace-only components in the package path, like src/jitxlib/parts
+# "--implicit-namespaces" required for namespace-only components in the package path, like src/jitxlib/voltage_divider
 tool_apidoc = ["python", "-m", "sphinx.ext.apidoc", "--implicit-namespaces"]
 
 [[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
