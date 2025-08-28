@@ -2,5 +2,5 @@ sphinx>=8.2.0
 sphinx_autodoc_typehints>=3.1.0
 myst-parser>=4.0.0
 pydata-sphinx-theme==0.16.1
-# ### pip install --extra-index-url "https://pypi.jitx.com/jitx/unstable/+simple" -r requirements.txt
+# ### pip install --extra-index-url "https://pypi.jitx.com/jitx/main/+simple" -r requirements.txt
 # jitx

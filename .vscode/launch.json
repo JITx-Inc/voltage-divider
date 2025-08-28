@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "configurations": [
+        {
+            "name": "Run Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "python": "/Users/philippe/.virtualenvs/jitx/bin/python",
+            "module": "tests.test_basic",
+            "args": [
+                "--port",
+                "${command:jitx.get-websocket-port}"
+            ],
+            "justMyCode": false
+        }
+    ]
+}

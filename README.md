@@ -1,64 +1,101 @@
-# Installation
+# jitxlib-voltage-divider Python API
 
-In slm.toml add:
-```
-voltage-divider = { git = "JITx-Inc/voltage-divider", version = "0.5.0" }
-```
+A Python package for voltage divider constraint solving and circuit construction, compatible with JITX and the jitxlib-parts package.
 
-# Voltage divider
+## Installation
 
-This project contains an [slm](https://github.com/StanzaOrg/slm)-based library for solving,
-constructing, and instantiating resistive dividers in [JITX](https://www.jitx.com/).
-
-## Forward divider
-
-This module will attempt to compute a solution for a forward voltage divider
-problem and then construct a voltage divider circuit based on the input and
-output specifications.
-
-```
-  val cxt = voltage-divider/constraints/VoltageDividerConstraints(
-    v-in = 10.0 +/- (1 %),
-    v-out = 2.5 +/- (5 %),
-    current = 50.0e-6,
-    base-query = R-query
-  )
-    val fb-div-type = voltage-divider/circuits/voltage-divider(cxt)
-    public inst fb-div : fb-div-type
-    net (fb-div.hi, vout-port)
-    net (fb-div.out, IC.buck.feedback)
-    net (fb-div.lo, GND)
+Install via pip:
+```bash
+pip install jitxlib-voltage-divider
 ```
 
-## Inverse divider
+## Usage
 
-This type defines the parameters for a voltage divider solver
-that attempts solve the inverse relationship than `VoltageDividerConstraints`.
+### 1. Define Constraints
 
-This is typically useful for the feedback voltage divider used in
-LDO's or switching converters. For example, an LDO might list specifications
-for the reference voltage as a tolerance over a particular temperature range.
-Then it is our job, as an engineer, to determine what voltage divider would
-cause the output of the LDO to drive a voltage in that range.
+```python
+from jitxlib.voltage_divider import VoltageDividerConstraints
+from jitx.toleranced import Toleranced
 
-This solver allows the user to spec a `v-out` for the LDO's output voltage
-as the objective and then the feedback reference as a the input voltage. The
-solver will then find the resistor combination with the right precision that
-keeps the LDO's output voltage in the objective range.
+# Define input and output voltages with tolerances
+v_in = Toleranced.percent(10.0, 1.0)   # 10V +/- 1%
+v_out = Toleranced.percent(2.5, 5.0)   # 2.5V +/- 5%
+current = 50e-6  # 50uA
 
+cxt = VoltageDividerConstraints(v_in=v_in, v_out=v_out, current=current)
 ```
-    val fb-cst = voltage-divider/constraints/InverseDividerConstraints(
-      ; Input is the voltage reference of the
-      ;   converter
-      v-in = min-typ-max(0.438, 0.45, 0.462); the LDO datasheet reference voltage
-      v-out = 3.3 +/- (3 %)
-      current = 100.0e-6
-      base-query = R-query
-    )
 
-    val fb-div-type = voltage-divider/circuits/voltage-divider(fb-cst)
-    public inst fb-div : fb-div-type
-    net (fb-div.hi, vout-port)
-    net (fb-div.out, IC.buck.feedback)
-    net (fb-div.lo, GND)
+### 2. Solve for a Voltage Divider
+
+This code needs to be run within the context of a JITX Design.
+Queried parts are cached and can be locked / unlocked per design from the BOM View in VSCode.
+
+```python
+from jitx.design import Design
+from jitxlib.voltage_divider import solve
+
+class ExampleDesign(Design) :
+    def __init__(self) :
+        solution = solve(cxt)
+        print("High resistor:", solution.R_h)
+        print("Low resistor:", solution.R_l)
+        print("Output voltage (Toleranced):", solution.vo)
 ```
+
+Run JITX Design.
+
+### 3. Build a Circuit
+
+```python
+from jitx.design import Design
+from jitxlib.voltage_divider import voltage_divider
+
+class ExampleDesign(Design) :
+    def __init__(self) :
+        self.circuit = voltage_divider(solution, name="MyVoltageDivider")
+```
+
+Run JITX Design.
+
+
+### 4. One-liner Construction
+
+```python
+from jitx.design import Design
+from jitxlib.voltage_divider import forward_divider
+
+class ExampleDesign(Design) :
+    def __init__(self) :
+        self.circuit = forward_divider(v_in, v_out, current, name="QuickDivider")
+```
+
+### 5. Inverse Divider Example
+
+```python
+from jitx.design import Design
+from jitxlib.voltage_divider import inverse_divider, Toleranced, min_typ_max
+
+
+class ExampleDesign(Design) :
+    def __init__(self) :
+        v_in = min_typ_max(0.788, 0.8, 0.812)  # Feedback voltage range
+        v_out = Toleranced.percent(3.3, 2.0)  # Output voltage +/- 2%
+        current = 50e-6
+        self.circuit = inverse_divider(v_in, v_out, current, name="FeedbackDivider")
+```
+
+## API Reference
+
+- `VoltageDividerConstraints`, `InverseDividerConstraints`: Define the problem.
+- `solve`: Solve for resistor values.
+- `Toleranced`, `Toleranced.percent`, etc.: Tolerance helpers.
+- `voltage_divider`, `voltage_divider_from_constraints`: Build a circuit from a solution or constraints.
+- `forward_divider`, `inverse_divider`: One-liner helpers for common use cases.
+
+## JITX Integration
+
+The returned circuit objects are compatible with JITX and can be used in larger PCB design flows.
+
+## License
+
+See LICENSE file.
