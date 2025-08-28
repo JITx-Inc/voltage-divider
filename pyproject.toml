@@ -14,13 +14,13 @@ build-backend = "hatchling.build"
 
 
 [project]
-name = "voltage_divider"
+name = "jitxlib-voltage-divider"
 dynamic = ["version"]
 dependencies = [
   "ruff==0.11.2",
   "pyright>=1.1.398,<1.2.0",
   "jitx>=0.1.dev,<0.2.0",
-  "jitxlib-parts==0.1.dev"
+  "jitxlib-parts>=0.1.dev,<0.2.0"
 ]
 requires-python = ">=3.12"
 authors = [
@@ -29,7 +29,7 @@ authors = [
 maintainers = [
   {name = "JITX"}
 ]
-description = "voltage-divider"
+description = "JITX Voltage Divider Solver"
 keywords = ["jitx", "pcb", "voltage divider"]
 
 classifiers = [
@@ -122,7 +122,7 @@ tool = "apidoc"
 source = "../src/jitxlib"
 out_dir = "source/jitxlib"
 depth = 4
-header = "JITX voltage-divider Documentation"
+header = "JITX Voltage Divider Documentation"
 # "--implicit-namespaces" required for namespace-only components in the package path, like src/jitxlib/parts
 tool_apidoc = ["python", "-m", "sphinx.ext.apidoc", "--implicit-namespaces"]
 
@@ -142,7 +142,7 @@ commands = [
   "mkdir -p ../dist",
   "pwd",
   "ls -la",
-  "tar jcf ../dist/voltage_divider-docs-$(hatch version).tar.bz2 -C build ."
+  "tar jcf ../dist/jitxlib-voltage_divider-docs-$(hatch version).tar.bz2 -C build ."
 ]
 
 # pyright: run "hatch run types:check"

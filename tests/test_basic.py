@@ -7,10 +7,10 @@ import jitx._instantiation
 from jitx.toleranced import Toleranced
 from jitx.sample import SampleDesign
 
-from voltage_divider.circuit import voltage_divider_from_constraints
-from voltage_divider.constraints import VoltageDividerConstraints
-from voltage_divider.inverse import InverseDividerConstraints
-from voltage_divider.solver import solve, NoPrecisionSatisfiesConstraintsError, VinRangeTooLargeError, IncompatibleVinVoutError
+from jitxlib.voltage_divider.circuit import voltage_divider_from_constraints
+from jitxlib.voltage_divider.constraints import VoltageDividerConstraints
+from jitxlib.voltage_divider.inverse import InverseDividerConstraints
+from jitxlib.voltage_divider.solver import solve, NoPrecisionSatisfiesConstraintsError, VinRangeTooLargeError, IncompatibleVinVoutError
 from jitxlib.parts import ResistorQuery
 
 class TestVoltageDivider(unittest.TestCase):
