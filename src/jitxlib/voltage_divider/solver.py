@@ -105,7 +105,7 @@ def filter_query_results(
     vo_valids = [constraints.is_compliant(vo) for vo in vo_set]
     is_valid = all(vo_valids)
     if not is_valid:
-        print(f"      Ignoring: not a solution when taking into account TCRs.")
+        print("      Ignoring: not a solution when taking into account TCRs.")
 
         def fmt(ok, vo):
             return "OK" if ok else f"FAIL ({vo} V)"
@@ -233,7 +233,7 @@ def study_solution(
     r_lo_val = get_resistance(r_lo)
     r_hi_val = get_resistance(r_hi)
     results = []
-    for lo_dr, hi_dr in zip(lo_drs, hi_drs):
+    for lo_dr, hi_dr in zip(lo_drs, hi_drs, strict=True):
         if lo_dr is not None and hi_dr is not None:
             vout = constraints.compute_objective(r_hi_val, r_lo_val, hi_dr, lo_dr)
             results.append(vout)

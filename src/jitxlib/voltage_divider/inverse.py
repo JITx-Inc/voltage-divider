@@ -1,13 +1,8 @@
-from dataclasses import dataclass
 from typing import Tuple
 
 from jitx.toleranced import Toleranced
-from jitxlib.parts import ResistorQuery
 
-from .constraints import (
-    VoltageDividerConstraints,
-    ensure_sources_limits,
-)
+from .constraints import VoltageDividerConstraints, DEF_DELTA_RESISTANCE
 
 
 class InverseDividerConstraints(VoltageDividerConstraints):
@@ -75,8 +70,8 @@ class InverseDividerConstraints(VoltageDividerConstraints):
         self,
         rh: Toleranced,
         rl: Toleranced,
-        hi_dr: Toleranced = Toleranced.exact(1.0),
-        lo_dr: Toleranced = Toleranced.exact(1.0),
+        hi_dr: Toleranced = DEF_DELTA_RESISTANCE,
+        lo_dr: Toleranced = DEF_DELTA_RESISTANCE,
     ) -> Toleranced:
         """
         Default `compute-objective` for inverse divider.
