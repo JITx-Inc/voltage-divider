@@ -4,7 +4,15 @@ from typing import List, Optional, Tuple
 from jitx.toleranced import Toleranced
 from jitxlib.parts import ResistorQuery
 
-from .constraints import VoltageDividerConstraints, get_default_resistor_query, ensure_sources_limits, STD_PRECS, DEF_MIN_SRCS, DEF_QUERY_LIMIT, DEF_SEARCH_RANGE
+from .constraints import (
+    VoltageDividerConstraints,
+    get_default_resistor_query,
+    ensure_sources_limits,
+    STD_PRECS,
+    DEF_MIN_SRCS,
+    DEF_QUERY_LIMIT,
+    DEF_SEARCH_RANGE,
+)
 
 
 @dataclass
@@ -15,6 +23,7 @@ class InverseDividerConstraints(VoltageDividerConstraints):
     Parameters for a voltage divider solver that attempts to solve the inverse relationship of VoltageDividerConstraints.
     Useful for feedback voltage dividers in LDOs or switching converters.
     """
+
     v_in: Toleranced
     v_out: Toleranced
     current: float
@@ -31,7 +40,13 @@ class InverseDividerConstraints(VoltageDividerConstraints):
         if self.temp_range is None:
             self.temp_range = None  # TODO: Set to min_max(-20.0, 50.0) or user-provided
 
-    def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Toleranced = Toleranced.exact(1.0), lo_dr: Toleranced = Toleranced.exact(1.0)) -> Toleranced:
+    def compute_objective(
+        self,
+        rh: Toleranced,
+        rl: Toleranced,
+        hi_dr: Toleranced = Toleranced.exact(1.0),
+        lo_dr: Toleranced = Toleranced.exact(1.0),
+    ) -> Toleranced:
         """
         Compute the output objective voltage range as a Toleranced based on resistor features.
         Default: Vobj = V-in * (1 + (R-H / R-L))

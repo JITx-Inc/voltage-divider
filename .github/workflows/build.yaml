@@ -6,12 +6,10 @@ on:
     branches:
       - main
       - dev
-      - python
   pull_request:
     branches:
       - main
       - dev
-      - python
   workflow_dispatch:
 
 jobs:

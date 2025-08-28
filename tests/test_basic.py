@@ -10,8 +10,14 @@ from jitx.sample import SampleDesign
 from jitxlib.voltage_divider.circuit import voltage_divider_from_constraints
 from jitxlib.voltage_divider.constraints import VoltageDividerConstraints
 from jitxlib.voltage_divider.inverse import InverseDividerConstraints
-from jitxlib.voltage_divider.solver import solve, NoPrecisionSatisfiesConstraintsError, VinRangeTooLargeError, IncompatibleVinVoutError
+from jitxlib.voltage_divider.solver import (
+    solve,
+    NoPrecisionSatisfiesConstraintsError,
+    VinRangeTooLargeError,
+    IncompatibleVinVoutError,
+)
 from jitxlib.parts import ResistorQuery
+
 
 class TestVoltageDivider(unittest.TestCase):
     port: int
@@ -31,7 +37,7 @@ class TestVoltageDivider(unittest.TestCase):
             v_out=exp_vout,
             current=50.0e-6,
             temp_range=Toleranced.min_max(-20.0, 50.0),
-            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
+            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"]),
         )
         with jitx._instantiation.instantiation.activate():
             result = solve(cxt)
@@ -44,7 +50,7 @@ class TestVoltageDivider(unittest.TestCase):
             v_in=Toleranced.percent(10.0, 1.0),
             v_out=Toleranced.percent(12.5, 1.0),
             current=50.0e-6,
-            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
+            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"]),
         )
         with self.assertRaises(IncompatibleVinVoutError) as cm:
             with jitx._instantiation.instantiation.activate():
@@ -56,7 +62,7 @@ class TestVoltageDivider(unittest.TestCase):
             v_in=Toleranced.percent(10.0, 10.0),
             v_out=Toleranced.percent(2.5, 0.1),
             current=50.0e-6,
-            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
+            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"]),
         )
         with self.assertRaises(VinRangeTooLargeError) as cm:
             with jitx._instantiation.instantiation.activate():
@@ -69,7 +75,7 @@ class TestVoltageDivider(unittest.TestCase):
             v_out=Toleranced.percent(2.5, 5.0),
             current=50.0e-6,
             prec_series=[20.0, 10.0, 5.0],
-            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"])
+            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0603"]),
         )
         with self.assertRaises(NoPrecisionSatisfiesConstraintsError) as cm:
             with jitx._instantiation.instantiation.activate():
@@ -83,7 +89,7 @@ class TestVoltageDivider(unittest.TestCase):
             v_out=exp_vout,
             current=50.0e-6,
             temp_range=Toleranced.min_max(-20.0, 50.0),
-            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"])
+            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"]),
         )
         with jitx._instantiation.instantiation.activate():
             result = solve(cxt)
@@ -97,10 +103,12 @@ class TestVoltageDivider(unittest.TestCase):
             v_out=Toleranced.percent(3.3, 2.0),
             current=50.0e-6,
             temp_range=Toleranced.min_max(-20.0, 50.0),
-            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"])
+            base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"]),
         )
         with jitx._instantiation.instantiation.activate():
-            circuit = voltage_divider_from_constraints(cxt, name="test_inverse_divider_circuit")
+            circuit = voltage_divider_from_constraints(
+                cxt, name="test_inverse_divider_circuit"
+            )
         build_circuit_from_instance(circuit, "test_inverse_divider_circuit")
 
 
@@ -139,6 +147,7 @@ def build_circuit(circ: type[jitx.Circuit], name: str):
         name=name, design=TestDesign, formatter=text_formatter, dump=f"{name}.json"
     )
 
+
 def text_formatter(ob, file=sys.stdout, indent=0):
     # not great but better than nothing, could use yaml or something.
     ind = "  " * indent
@@ -159,6 +168,7 @@ def text_formatter(ob, file=sys.stdout, indent=0):
                 text_formatter(el, file, indent)
     else:
         print(ind + str(ob), file=file)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

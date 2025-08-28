@@ -12,16 +12,21 @@ DEF_MIN_SRCS = 3
 DEF_QUERY_LIMIT = 50
 DEF_SEARCH_RANGE = 10.0  # Percent, unitless
 
+
 # Helper for default resistor query
 # FIXME: This should be implemented in query_api.py with setters.
 def get_default_resistor_query() -> ResistorQuery:
     """Return a default ResistorQuery instance."""
     return ResistorQuery()
 
+
 # Helper for ensure-sources-limits
 def ensure_sources_limits(min_sources: int, query_limit: int):
     if min_sources > query_limit:
-        raise ValueError(f"Min Sources must be less than Query Limit: min-sources={min_sources} query-limit={query_limit}")
+        raise ValueError(
+            f"Min Sources must be less than Query Limit: min-sources={min_sources} query-limit={query_limit}"
+        )
+
 
 @dataclass
 class VoltageDividerConstraints:
@@ -31,6 +36,7 @@ class VoltageDividerConstraints:
     Encapsulates the necessary parameters for the solver as well as other logistics parameters for the generated result.
     This type solves the "forward" voltage divider problem. The input voltage is the `hi` side of the voltage divider and the objective voltage is the middle node (`out`).
     """
+
     v_in: Toleranced
     v_out: Toleranced
     current: float
@@ -46,7 +52,13 @@ class VoltageDividerConstraints:
         self.prec_series = sorted(self.prec_series, reverse=True)
         ensure_sources_limits(self.min_sources, self.query_limit)
 
-    def compute_objective(self, rh: Toleranced, rl: Toleranced, hi_dr: Toleranced = Toleranced.exact(1.0), lo_dr: Toleranced = Toleranced.exact(1.0)) -> Toleranced:
+    def compute_objective(
+        self,
+        rh: Toleranced,
+        rl: Toleranced,
+        hi_dr: Toleranced = Toleranced.exact(1.0),
+        lo_dr: Toleranced = Toleranced.exact(1.0),
+    ) -> Toleranced:
         """
         Compute the output objective voltage range as a Toleranced based on resistor features.
         Default: Vobj = V-in * (R-L / (R-H + R-L))
@@ -89,4 +101,4 @@ class VoltageDividerConstraints:
         """
         r_hi = (self.v_in.typ - self.v_out.typ) / self.current
         r_lo = self.v_out.typ / self.current
-        return r_hi, r_lo 
+        return r_hi, r_lo
