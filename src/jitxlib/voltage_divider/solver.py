@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from jitx.toleranced import Toleranced
 from jitxlib.parts import search_resistors, ExistKeys, DistinctKey
-from jitxlib.parts.types.main import to_component
+from jitxlib.parts.types.main import to_component, PartJSON
 from jitxlib.parts.types.component import MinMax
 from jitxlib.parts.types.resistor import Resistor
 
@@ -155,6 +155,14 @@ def query_resistance_by_values(
     Query for resistance values within the specified precision range using search_resistors.
     Returns a list of resistance values (float).
     """
+
+    def to_float(r: PartJSON) -> float:
+        if not isinstance(r, int | float):
+            raise ValueError(
+                f"Expected returned resistance value from database to be an int|float, got {type(r)}: {r}"
+            )
+        return float(r)
+
     # Use search_resistors with distinct resistance
     exist_keys = ExistKeys(["tcr_pos", "tcr_neg"])
     distinct_key = DistinctKey("resistance")
@@ -167,7 +175,7 @@ def query_resistance_by_values(
         distinct=distinct_key,
     )
     # Case from int to float (mimic stanza codebase, the database is sensitive to the difference, maybe due to caching).
-    return [float(r) for r in resistances]
+    return [to_float(r) for r in resistances]
 
 
 def query_resistors(
@@ -177,6 +185,13 @@ def query_resistors(
     Query for resistors matching a particular target resistance and precision.
     Returns a list of Resistor objects.
     """
+
+    def to_resistor(r: PartJSON) -> Resistor:
+        c = to_component(r)
+        if not isinstance(c, Resistor):
+            raise ValueError(f"Expected Resistor, got {type(c)}: {c}")
+        return c
+
     exist_keys = ExistKeys(["tcr_pos", "tcr_neg"])
     base_query = constraints.base_query
     results = search_resistors(
@@ -187,7 +202,7 @@ def query_resistors(
         limit=constraints.min_sources,
     )
     # Convert results to Resistor objects
-    return [to_component(r) for r in results]
+    return [to_resistor(r) for r in results]
 
 
 def study_solution(
