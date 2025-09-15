@@ -1,3 +1,5 @@
+.*
+!.github
 dist/
 __pycache__/
 /jitx-design
@@ -12,9 +14,6 @@ parts-db/
 test-pkgs/
 vd-tests
 
-#
 .slm
-
-
 
 .vscode/
