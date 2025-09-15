@@ -2,11 +2,7 @@
 requires = [
   "hatchling>=1.27.0,<2.0",
   "hatch-vcs>=0.4.0,<0.5.0",
-  "hatch-sphinx==0.0.2",
-  "sphinx>=8.1.0,<9.0",
-  "sphinx_autodoc_typehints>=3.1.0,<4.0",
   "myst-parser>=4.0.0",
-  "pydata-sphinx-theme==0.16.1",
   "ruff==0.11.2",
   "pyright>=1.1.398,<1.2.0",
 ]
@@ -120,44 +116,12 @@ reportMissingImports = "warning"
 [tool.hatch.build.targets.wheel]
 packages = ["src/jitxlib"]
 
-#[tool.hatch.build.targets.wheel.hooks.sphinx]
-#dependencies = [
-#  "jitxcore>=0.1.dev,<0.2.0",
-#  "websockets==15.0.1"
-#]
-
-[[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
-tool = "apidoc"
-source = "../src/jitxlib"
-out_dir = "source/jitxlib"
-depth = 4
-header = "JITX Voltage Divider Documentation"
-# "--implicit-namespaces" required for namespace-only components in the package path, like src/jitxlib/voltage_divider
-tool_apidoc = ["python", "-m", "sphinx.ext.apidoc", "--implicit-namespaces"]
-
-[[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
-tool = "build"
-format = "html"
-source = "source"
-out_dir = "build"
-sphinx_opts = "--jobs auto --write-all --fresh-env --warning-file build.out"
-
-[[tool.hatch.build.targets.wheel.hooks.sphinx.tools]]
-tool = "custom"
-out_dir = "build"
-shell = true
-commands = [
-  #"! grep ERROR: build.out  # fail if there are any ERROR: lines in docs/build.out",
-  "mkdir -p ../dist",
-  "pwd",
-  "ls -la",
-  "tar jcf ../dist/jitxlib-voltage_divider-docs-$(hatch version).tar.bz2 -C build ."
-]
-
 # pyright: run "hatch run types:check"
 [tool.hatch.envs.types]
 extra-dependencies = [
   "pyright>=1.1.0",
+  "sphinx>=8.1.0,<9.0",
+  "pytest",
 ]
 
 [tool.hatch.envs.types.scripts]
