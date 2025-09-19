@@ -59,6 +59,10 @@ jobs:
           ls -la ./.github/actions
           echo -----
           ls -la ./.github/actions/pybuild-action
+          echo -----
+          ls -la ./.github/actions/pybuild-action/scripts
+          echo -----
+          ls -la /home/runner/work/voltage-divider/voltage-divider/./.github/actions/pybuild-action/scripts/slack-template.bash
 
       - name: Build, Test, and Deploy
         uses: ./.github/actions/pybuild-action  # from checkout above
@@ -70,3 +74,14 @@ jobs:
            notify-slack: true
            slack-token: ${{ secrets.SLACK_TOKEN }}
            github-user: ${{ github.actor }}
+
+      # another extra checkout step for pybuild-action
+      # so that the post-action step remembers how to clean it up
+      - name: Check out pybuild-action
+        uses: actions/checkout@v5
+        with:
+          repository: jitx-inc/pybuild-action
+          ref: v1
+          token: ${{ steps.app-token.outputs.token }}
+          path: ./.github/actions/pybuild-action
+
