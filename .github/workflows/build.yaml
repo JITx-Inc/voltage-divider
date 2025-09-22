@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: jitx-inc/pybuild-action
-          ref: e5f8b756b8eb8a420bb6fc2382c60e88992283cb
+          ref: 9eb0078d0918d1fbaa5ff0253cc547a037ec13da
           token: ${{ steps.app-token.outputs.token }}
           path: ./.github/actions/pybuild-action
 
