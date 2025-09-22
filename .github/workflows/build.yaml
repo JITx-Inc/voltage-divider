@@ -46,23 +46,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: jitx-inc/pybuild-action
-          ref: v1
+          ref: e5f8b756b8eb8a420bb6fc2382c60e88992283cb
           token: ${{ steps.app-token.outputs.token }}
           path: ./.github/actions/pybuild-action
-
-      - name: ls
-        run: |
-          ls -la
-          echo -----
-          ls -la ./.github
-          echo -----
-          ls -la ./.github/actions
-          echo -----
-          ls -la ./.github/actions/pybuild-action
-          echo -----
-          ls -la ./.github/actions/pybuild-action/scripts
-          echo -----
-          ls -la /home/runner/work/voltage-divider/voltage-divider/./.github/actions/pybuild-action/scripts/slack-template.bash
 
       - name: Build, Test, and Deploy
         uses: ./.github/actions/pybuild-action  # from checkout above
