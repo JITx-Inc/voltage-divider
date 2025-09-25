@@ -60,3 +60,5 @@ jobs:
            notify-slack: true
            slack-token: ${{ secrets.SLACK_TOKEN }}
            github-user: ${{ github.actor }}
+           githubapp-id: ${{ vars.GITHUBAPP_ID }}
+           githubapp-private-key: ${{ secrets.GITHUBAPP_PRIVATE_KEY }}
