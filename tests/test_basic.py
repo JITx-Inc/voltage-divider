@@ -7,6 +7,7 @@ import jitx.run
 import jitx._instantiation
 from jitx.toleranced import Toleranced
 from jitx.sample import SampleDesign
+from jitx._websocket import set_websocket_uri
 
 from jitxlib.voltage_divider.circuit import voltage_divider_from_constraints
 from jitxlib.voltage_divider.constraints import VoltageDividerConstraints
@@ -19,13 +20,15 @@ from jitxlib.voltage_divider.solver import (
 )
 from jitxlib.parts import ResistorQuery
 
+from . import builder
+
 
 class TestVoltageDivider(unittest.TestCase):
     port: int
 
     def setUp(self):
         if hasattr(TestVoltageDivider, "port"):
-            jitx.run.set_websocket_uri("localhost", TestVoltageDivider.port)
+            set_websocket_uri(host="localhost", port=TestVoltageDivider.port)
 
         import jitxlib.parts.commands
 
@@ -136,7 +139,7 @@ def build_circuit_from_instance(instance: jitx.Circuit, name: str):
 
     TestDesign.__name__ = name
 
-    jitx.run.build(
+    builder.build(
         name=name, design=TestDesign, formatter=text_formatter, dump=f"{name}.json"
     )
 
@@ -154,7 +157,7 @@ def build_circuit(circ: type[jitx.Circuit], name: str):
 
     TestDesign.__name__ = name
 
-    jitx.run.build(
+    builder.build(
         name=name, design=TestDesign, formatter=text_formatter, dump=f"{name}.json"
     )
 
