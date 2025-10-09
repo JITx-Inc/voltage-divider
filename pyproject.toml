@@ -76,7 +76,7 @@ installer = "pip"
 extra-args = ["-vv", "-m", "not integration"]
 
 [[tool.hatch.envs.test.matrix]]
-python = ["3.12", "3.13"]
+python = ["3.12", "3.13", "3.14"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
