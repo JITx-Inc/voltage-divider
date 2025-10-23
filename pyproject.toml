@@ -13,8 +13,6 @@ build-backend = "hatchling.build"
 name = "jitxlib-voltage-divider"
 dynamic = ["version"]
 dependencies = [
-  "ruff==0.11.2",
-  "pyright>=1.1.398,<1.2.0",
   "jitx>=0.1.dev,<0.2.0",
   "jitxlib-parts>=0.1.dev,<0.2.0"
 ]
