@@ -1,0 +1,49 @@
+
+name: Publish to PyPI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish ${{ github.ref_name }} to PyPI
+    runs-on: ubuntu-24.04
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/jitxcore
+
+    permissions:
+      contents: read   # for reading content from a repo
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+
+    steps:
+
+      - name: Ensure valid tag
+        if: (! github.ref_type == 'tag') || (! startsWith(github.ref_name, 'v')) || contains(github.ref_name, '.dev')
+        shell: bash
+        run: |
+          echo "Invalid tag for publishing: ${{ github.ref_name }}"
+          exit -1
+
+      - name: Fetch Release
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.ref_name }}
+          fileName: '*'
+          out-file-path: dist/
+          extract: false
+
+      - name: List artifact files
+        shell: bash
+        run: |
+            ls -la dist/ || true
+            rm -f dist/requirements.txt
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: "https://upload.pypi.org/legacy/"
+          packages-dir: dist/
+
