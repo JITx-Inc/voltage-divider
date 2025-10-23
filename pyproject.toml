@@ -13,8 +13,8 @@ build-backend = "hatchling.build"
 name = "jitxlib-voltage-divider"
 dynamic = ["version"]
 dependencies = [
-  "jitx>=0.1.dev,<0.2.0",
-  "jitxlib-parts>=0.1.dev,<0.2.0"
+  "jitx>=4.0.0,<5",
+  "jitxlib-parts>=1.0.0,<2"
 ]
 requires-python = ">=3.12"
 authors = [
@@ -52,12 +52,6 @@ Documentation = "https://docs.jitx.com"
 
 
 [tool]
-
-[tool.hatch.envs.default.env-vars]
-PIP_INDEX_URL = "https://pypi.jitx.com/jitx/main/+simple"
-
-[tool.hatch.envs.hatch-test.env-vars]
-PIP_INDEX_URL = "https://pypi.jitx.com/jitx/main/+simple"
 
 # tests: run "hatch test --cover"
 [tool.hatch.envs.test]
