@@ -1,9 +1,9 @@
 [build-system]
 requires = [
   "hatchling>=1.27.0,<2.0",
-  "hatch-vcs>=0.4.0,<0.5.0",
+  "hatch-vcs>=0.5.0,<0.6.0",
   "myst-parser>=4.0.0",
-  "ruff==0.11.2",
+  "ruff==0.14.9",
   "pyright>=1.1.398,<1.2.0",
 ]
 build-backend = "hatchling.build"
@@ -79,7 +79,7 @@ fallback-version = "0.0.0+undefined"
 
 # formatting: run "hatch fmt --check"
 [tool.hatch.envs.hatch-static-analysis]
-dependencies = ["ruff==0.11.2"]
+dependencies = ["ruff==0.14.9"]
 config-path = "none"  # don't use hatch defaults
 
 [tool.ruff]
