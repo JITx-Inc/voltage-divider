@@ -45,7 +45,7 @@ jobs:
       # extra checkout step for pybuild-action
       # since pybuild-action is private and this repo is public
       - name: Check out pybuild-action
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: jitx-inc/pybuild-action
           ref: v1
