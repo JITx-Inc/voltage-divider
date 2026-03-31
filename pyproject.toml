@@ -54,18 +54,16 @@ Documentation = "https://docs.jitx.com"
 [tool]
 
 # tests: run "hatch test --cover"
-[tool.hatch.envs.test]
-dependencies = [
-  "coverage[toml]",
-  "pytest",
-  "pytest-cov",
-]
-
 [tool.hatch.envs.hatch-test]
 randomize = true
 parallel = false
 installer = "pip"
 extra-args = ["-vv", "-m", "not integration"]
+dependencies = [
+  "coverage[toml]",
+  "pytest",
+  "pytest-cov",
+]
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.12", "3.13", "3.14"]
