@@ -37,7 +37,7 @@ jobs:
         with:
           owner: "JITX-Inc"
           # repositories: # unset means all when specifying "owner"
-          app-id: ${{ vars.GITHUBAPP_ID }}
+          client-id: ${{ secrets.GITHUBAPP_CLIENT_ID }}
           private-key: ${{ secrets.GITHUBAPP_PRIVATE_KEY }}
           #permission-contents: write  # for committing content to a repo
           #permission-actions: read    # for reading artifacts from actions
@@ -62,5 +62,5 @@ jobs:
            notify-slack: true
            slack-token: ${{ secrets.SLACK_TOKEN }}
            github-user: ${{ github.actor }}
-           githubapp-id: ${{ vars.GITHUBAPP_ID }}
+           githubclient-id: ${{ secrets.GITHUBAPP_CLIENT_ID }}
            githubapp-private-key: ${{ secrets.GITHUBAPP_PRIVATE_KEY }}
