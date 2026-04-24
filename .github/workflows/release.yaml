@@ -41,9 +41,24 @@ jobs:
             ls -la dist/ || true
             rm -f dist/requirements.txt
 
+      - name: Check for PRELIM strings in dist/
+        shell: bash
+        run: |
+          PRELIM_MATCHES=$(grep -rn "PRELIM" --exclude-dir=.git --exclude-dir=.github dist/ 2>/dev/null || true)
+          if [ -n "$PRELIM_MATCHES" ]; then
+            while IFS= read -r match; do
+              FILE=$(echo "$match" | cut -d: -f1)
+              LINENO=$(echo "$match" | cut -d: -f2)
+              TEXT=$(echo "$match" | cut -d: -f3-)
+              echo "::error file=${FILE},line=${LINENO}::PRELIM string found in dist/: ${TEXT}"
+            done <<< "$PRELIM_MATCHES"
+            echo "ERROR: PRELIM strings found in dist/ — aborting publish to PyPI"
+            echo "$PRELIM_MATCHES"
+            exit 1
+          fi
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: "https://upload.pypi.org/legacy/"
           packages-dir: dist/
-
