@@ -1,0 +1,66 @@
+
+name: Build
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write     # to be able to check out repos and generate app tokens
+      actions: write      # to be able to trigger other workflows
+
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+      fail-fast: false
+
+    steps:
+
+      # set up token and permissions
+      - name: Generate an app token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          owner: "JITX-Inc"
+          # repositories: # unset means all when specifying "owner"
+          client-id: ${{ secrets.GITHUBAPP_CLIENT_ID }}
+          private-key: ${{ secrets.GITHUBAPP_PRIVATE_KEY }}
+          #permission-contents: write  # for committing content to a repo
+          #permission-actions: read    # for reading artifacts from actions
+
+      # extra checkout step for pybuild-action
+      # since pybuild-action is private and this repo is public
+      - name: Check out pybuild-action
+        uses: actions/checkout@v6
+        with:
+          repository: jitx-inc/pybuild-action
+          ref: v1
+          token: ${{ steps.app-token.outputs.token }}
+          path: ./pybuild-action
+
+      - name: Build, Test, and Deploy
+        uses: ./pybuild-action  # from checkout above
+        with:
+           python-version: "${{ matrix.python-version }}"
+           run-publish: true
+           hatch-index-user: ${{ vars.HATCH_INDEX_USER }}
+           hatch-index-auth: ${{ secrets.HATCH_INDEX_AUTH }}
+           notify-slack: true
+           slack-token: ${{ secrets.SLACK_TOKEN }}
+           github-user: ${{ github.actor }}
+           githubapp-client-id: ${{ secrets.GITHUBAPP_CLIENT_ID }}
+           githubapp-private-key: ${{ secrets.GITHUBAPP_PRIVATE_KEY }}
