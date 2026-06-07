@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional
 
 from jitx.component import Component
@@ -44,19 +45,14 @@ class VoltageDividerCircuit(Circuit):
         self.output_voltage = sol.vo
 
 
-def _voltage_divider_instantiable(
-    name: Optional[str] = None,
-) -> type[VoltageDividerCircuit]:
-    """
-    Construct a voltage divider circuit instantiable from a solution.
-    The returned class will have the type name set to `name` if provided.
-    """
-    base_class = VoltageDividerCircuit
+def _warn_name_ignored(name: Optional[str]) -> None:
     if name is not None:
-        # Dynamically create a subclass with the given name
-        return type(name, (VoltageDividerCircuit,), {})
-    else:
-        return base_class
+        warnings.warn(
+            "The `name` argument is deprecated and ignored; the circuit is "
+            "always named 'VoltageDividerCircuit'.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
 
 
 def voltage_divider(
@@ -64,10 +60,12 @@ def voltage_divider(
 ) -> VoltageDividerCircuit:
     """
     Construct a voltage divider circuit from a solution.
-    The returned class will be an instantiable subclass of VoltageDividerCircuit.
-    The returned class will have the type name set to `name` if provided.
+
+    .. deprecated::
+        The `name` argument is deprecated and ignored.
     """
-    return _voltage_divider_instantiable(name)(sol)
+    _warn_name_ignored(name)
+    return VoltageDividerCircuit(sol)
 
 
 def voltage_divider_from_constraints(
