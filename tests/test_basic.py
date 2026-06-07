@@ -116,9 +116,7 @@ class TestVoltageDivider(unittest.TestCase):
             base_query=ResistorQuery(mounting="smd", min_stock=10, case=["0402"]),
         )
         with jitx._instantiation.instantiation.activate():
-            circuit = voltage_divider_from_constraints(
-                cxt, name="test_inverse_divider_circuit"
-            )
+            circuit = voltage_divider_from_constraints(cxt)
         build_circuit_from_instance(circuit, "test_inverse_divider_circuit")
 
     # All tests above are integration tests. Here is an example test that actually runs in CI.
@@ -134,10 +132,11 @@ def build_circuit_from_instance(instance: jitx.Circuit, name: str):
         name: Design name
     """
 
+    # Defined here (not during instantiation) so the JITX class is created
+    # outside of any active instantiation context, which JITX 4.2+ requires.
+    # The design name is supplied to builder.build(name=...) directly.
     class TestDesign(SampleDesign):
         circuit = instance
-
-    TestDesign.__name__ = name
 
     builder.build(
         name=name, design=TestDesign, formatter=text_formatter, dump=f"{name}.json"
@@ -154,8 +153,6 @@ def build_circuit(circ: type[jitx.Circuit], name: str):
 
     class TestDesign(SampleDesign):
         circuit = circ()
-
-    TestDesign.__name__ = name
 
     builder.build(
         name=name, design=TestDesign, formatter=text_formatter, dump=f"{name}.json"
