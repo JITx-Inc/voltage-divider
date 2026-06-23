@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Any, List, Optional, Tuple, cast
 
 from jitx.toleranced import Toleranced
-from jitxlib.parts import search_resistors, ExistKeys, DistinctKey
-from jitxlib.parts._types.main import to_component, PartJSON
-from jitxlib.parts._types.component import MinMax
-from jitxlib.parts._types.resistor import Resistor
+from jitxlib.parts import search_resistors, ExistKeys, DistinctKey, ResistorQuery
+from jitxlib.parts.query_api import to_component
 
 from .constraints import VoltageDividerConstraints
 from .errors import (
@@ -16,14 +14,38 @@ from .errors import (
 )
 
 
+@dataclass(frozen=True)
+class _ResistorData:
+    """Resistor parameters the solver needs from a parts-database entry."""
+
+    resistance: float
+    mpn: str
+    tolerance: Optional[Tuple[float, float]]  # (min, max)
+    tcr: Optional[Tuple[float, float]]  # (pos, neg)
+
+
+@dataclass
+class ResistorSelection:
+    """A resistor chosen by the solver.
+
+    Carries a resolved ``ResistorQuery`` pinned to the exact part (by MPN, with
+    resistance and precision) so the circuit can instantiate it through the
+    public ``jitxlib.parts.Resistor`` factory.
+    """
+
+    resistance: float
+    mpn: str
+    query: ResistorQuery
+
+
 @dataclass
 class VoltageDividerSolution:
     """
     Voltage Divider Solution Type
     """
 
-    R_h: Resistor
-    R_l: Resistor
+    R_h: ResistorSelection
+    R_l: ResistorSelection
     vo: Toleranced
 
 
@@ -126,7 +148,11 @@ def filter_query_results(
     print(
         f"      Solved: mpn1={mpn1}, mpn2={mpn2}, v-out={vout_str}, current={current}A"
     )
-    return VoltageDividerSolution(r_hi_cmp, r_lo_cmp, worst_case_vo)
+    return VoltageDividerSolution(
+        _select(r_hi_cmp, constraints.base_query, precision),
+        _select(r_lo_cmp, constraints.base_query, precision),
+        worst_case_vo,
+    )
 
 
 def sort_pairs_by_best_fit(
@@ -156,7 +182,7 @@ def query_resistance_by_values(
     Returns a list of resistance values (float).
     """
 
-    def to_float(r: PartJSON) -> float:
+    def to_float(r: object) -> float:
         if not isinstance(r, int | float):
             raise ValueError(
                 f"Expected returned resistance value from database to be an int|float, got {type(r)}: {r}"
@@ -180,17 +206,11 @@ def query_resistance_by_values(
 
 def query_resistors(
     constraints: VoltageDividerConstraints, target: float, prec: float
-) -> List[Resistor]:
+) -> List[_ResistorData]:
     """
     Query for resistors matching a particular target resistance and precision.
-    Returns a list of Resistor objects.
+    Returns the parameters the solver needs (resistance, mpn, tolerance, tcr).
     """
-
-    def to_resistor(r: PartJSON) -> Resistor:
-        c = to_component(r)
-        if not isinstance(c, Resistor):
-            raise ValueError(f"Expected Resistor, got {type(c)}: {c}")
-        return c
 
     exist_keys = ExistKeys(["tcr_pos", "tcr_neg"])
     base_query = constraints.base_query
@@ -201,14 +221,42 @@ def query_resistors(
         exist=exist_keys,
         limit=constraints.min_sources,
     )
-    # Convert results to Resistor objects
-    return [to_resistor(r) for r in results]
+    out: List[_ResistorData] = []
+    for r in results:
+        # `to_component` (public, from query_api) parses a parts-db row into a
+        # dataclass; read its fields through a cast so we depend only on the
+        # public function and not on the private result type.
+        c = cast(Any, to_component(r))
+        tol = c.tolerance
+        tcr = c.tcr
+        out.append(
+            _ResistorData(
+                resistance=float(c.resistance),
+                mpn=str(c.mpn),
+                tolerance=(tol.min, tol.max) if tol is not None else None,
+                tcr=(tcr.pos, tcr.neg) if tcr is not None else None,
+            )
+        )
+    return out
+
+
+def _select(
+    chosen: _ResistorData, base_query: ResistorQuery, precision: float
+) -> ResistorSelection:
+    """
+    Build a resolved query pinned to the exact validated part so the circuit
+    instantiates the precise resistor whose TCR/tolerance the solver checked.
+    """
+    query = base_query.update(
+        mpn=chosen.mpn, resistance=chosen.resistance, precision=precision / 100.0
+    )
+    return ResistorSelection(chosen.resistance, chosen.mpn, query)
 
 
 def study_solution(
     constraints: VoltageDividerConstraints,
-    r_hi: Resistor,
-    r_lo: Resistor,
+    r_hi: _ResistorData,
+    r_lo: _ResistorData,
     temp_range: Toleranced,
 ) -> List[Toleranced]:
     """
@@ -242,33 +290,34 @@ def study_solution(
     return results
 
 
-def get_resistance(r: Resistor) -> Toleranced:
+def get_resistance(r: _ResistorData) -> Toleranced:
     """
     Get the resistance value as a Toleranced.
-    Uses the internal information of the Resistor component object to construct the resistance value with tolerances.
-    Raises an error if tolerance is None. Always expects MinMax for tolerance.
+    Combines the nominal resistance with the (min, max) tolerance band.
+    Raises an error if tolerance is None.
     """
     if r.tolerance is None:
         raise ValueError(
-            "Resistor tolerance must be specified (MinMax). None is not allowed."
+            "Resistor tolerance must be specified (min, max). None is not allowed."
         )
     return tol_minmax(r.resistance, r.tolerance)
 
 
-def tol_minmax(typ: float, tolerance: MinMax) -> Toleranced:
+def tol_minmax(typ: float, tolerance: Tuple[float, float]) -> Toleranced:
     """
-    Create a Toleranced value from the MinMax range.
+    Create a Toleranced value from a (min, max) tolerance band.
     Mirrors the Stanza implementation:
     tol(v, tolerance:MinMaxRange):
       coeff = min-max(1.0 + min(tolerance), 1.0 + max(tolerance))
       v * coeff
     """
-    coeff = Toleranced.min_max(1.0 + tolerance.min, 1.0 + tolerance.max)
+    tol_min, tol_max = tolerance
+    coeff = Toleranced.min_max(1.0 + tol_min, 1.0 + tol_max)
     return typ * coeff
 
 
 def compute_tcr_deviation(
-    resistor: Resistor, temperature: float
+    resistor: _ResistorData, temperature: float
 ) -> Optional[Toleranced]:
     """
     Compute the expected deviation window of a given resistor at a given temperature.
@@ -288,7 +337,7 @@ def compute_tcr_deviation(
         return None
     # This mirrors the Stanza hack for database issues:
     # See: https://linear.app/jitx/issue/PROD-328/tcr-values-in-database-seem-wrong
-    p, n = tcr.pos, tcr.neg
+    p, n = tcr
     tcr_interval = Toleranced.min_max(min(p, n), max(p, n))
     return compute_tcr_deviation_interval(tcr_interval, temperature, ref_temp)
 
