@@ -37,8 +37,8 @@ from jitxlib.voltage_divider import solve
 class ExampleDesign(Design) :
     def __init__(self) :
         solution = solve(cxt)
-        print("High resistor:", solution.R_h)
-        print("Low resistor:", solution.R_l)
+        print("High resistor:", solution.R_h.mpn, solution.R_h.resistance, "ohm")
+        print("Low resistor:", solution.R_l.mpn, solution.R_l.resistance, "ohm")
         print("Output voltage (Toleranced):", solution.vo)
 ```
 

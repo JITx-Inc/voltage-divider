@@ -1,12 +1,10 @@
 import warnings
 from typing import Optional
 
-from jitx.component import Component
 from jitx.circuit import Circuit
-from jitx.inspect import decompose
 from jitx.net import Net, Port
 from jitx.toleranced import Toleranced
-from jitxlib.parts.convert import convert_component
+from jitxlib.parts import Resistor
 
 from .solver import VoltageDividerSolution, solve
 from .constraints import VoltageDividerConstraints
@@ -23,9 +21,8 @@ class VoltageDividerCircuit(Circuit):
     hi: Port
     out: Port
     lo: Port
-    # Make those jitxlib.parts.Resistors for typed attribute accessing.
-    r_hi: Component
-    r_lo: Component
+    r_hi: Resistor
+    r_lo: Resistor
     nets: list[Net]
     output_voltage: Toleranced
 
@@ -34,13 +31,17 @@ class VoltageDividerCircuit(Circuit):
         self.hi = Port()
         self.out = Port()
         self.lo = Port()
-        # Resistor instances
-        self.r_hi = convert_component(sol.R_h.component, component_name="r_hi")()
-        self.r_lo = convert_component(sol.R_l.component, component_name="r_lo")()
-        # Nets (connections)
-        h_p1, h_p2 = decompose(self.r_hi, Port)
-        l_p1, l_p2 = decompose(self.r_lo, Port)
-        self.nets = [h_p1 + self.hi, h_p2 + l_p1 + self.out, l_p2 + self.lo]
+        # Resistor instances, instantiated from the solver's pinned queries via
+        # the public parts factory (safe under active instantiation).
+        self.r_hi = Resistor(sol.R_h.query)
+        self.r_lo = Resistor(sol.R_l.query)
+        # Nets (connections). A resistor is symmetric, so p1/p2 orientation is
+        # electrically irrelevant.
+        self.nets = [
+            self.r_hi.p1 + self.hi,
+            self.r_hi.p2 + self.r_lo.p1 + self.out,
+            self.r_lo.p2 + self.lo,
+        ]
         # FIXME: Properties are a concept of JITX ESIR interface and don't have a port in the python interface.
         self.output_voltage = sol.vo
 
