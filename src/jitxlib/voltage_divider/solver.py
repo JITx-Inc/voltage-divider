@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from logging import getLogger
 from typing import Any, List, Optional, Tuple, cast
 
 from jitx.toleranced import Toleranced
@@ -12,6 +13,9 @@ from .errors import (
     IncompatibleVinVoutError,
     NoSolutionFoundError,
 )
+
+
+logger = getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -87,7 +91,7 @@ def solve(constraints: VoltageDividerConstraints) -> VoltageDividerSolution:
         raise NoPrecisionSatisfiesConstraintsError(goals, pre_screen)
     # Try to solve for each valid precision
     for std_prec in series:
-        print(f"-> Precision {std_prec}%")
+        logger.debug("Trying precision %s%%", std_prec)
         sol = solve_over_series(constraints, std_prec, search_prec)
         if sol is not None:
             return sol
@@ -112,13 +116,14 @@ def solve_over_series(
 def filter_query_results(
     constraints: VoltageDividerConstraints, ratio: Ratio, precision: float
 ) -> Optional[VoltageDividerSolution]:
-    print(f"    - Querying resistors for R-h={ratio.high}Ω R-l={ratio.low}Ω")
+    logger.debug("Querying resistors for R-h=%s ohm R-l=%s ohm", ratio.high, ratio.low)
     r_his = query_resistors(constraints, ratio.high, precision)
     r_los = query_resistors(constraints, ratio.low, precision)
     min_srcs = constraints.min_sources
     if len(r_his) < min_srcs or len(r_los) < min_srcs:
-        print(
-            f"      Ignoring: there must be at least {min_srcs} resistors of each type"
+        logger.debug(
+            "Ignoring candidate: there must be at least %s resistors of each type",
+            min_srcs,
         )
         return None
     r_hi_cmp = r_his[0]
@@ -127,17 +132,16 @@ def filter_query_results(
     vo_valids = [constraints.is_compliant(vo) for vo in vo_set]
     is_valid = all(vo_valids)
     if not is_valid:
-        print("      Ignoring: not a solution when taking into account TCRs.")
+        logger.debug("Ignoring candidate: not a solution when taking TCRs into account")
 
         def fmt(ok, vo):
             return "OK" if ok else f"FAIL ({vo} V)"
 
-        print(f"        min-temp: {fmt(vo_valids[0], vo_set[0])}")
-        print(f"        max-temp: {fmt(vo_valids[1], vo_set[1])}")
+        logger.debug("min-temp: %s", fmt(vo_valids[0], vo_set[0]))
+        logger.debug("max-temp: %s", fmt(vo_valids[1], vo_set[1]))
         return None
     # TODO: Compute the worst case v-out here and use that instead of just the first
     worst_case_vo = vo_set[0]
-    # Print solution found
     mpn1 = r_hi_cmp.mpn
     mpn2 = r_lo_cmp.mpn
     vout_str = f"({vo_set[0]}, {vo_set[1]})V" if len(vo_set) > 1 else f"({vo_set[0]})V"
@@ -145,8 +149,12 @@ def filter_query_results(
         current = vo_set[0].typ / ratio.low
     except Exception:
         current = "unknown"
-    print(
-        f"      Solved: mpn1={mpn1}, mpn2={mpn2}, v-out={vout_str}, current={current}A"
+    logger.info(
+        "Solved: mpn1=%s, mpn2=%s, v-out=%s, current=%sA",
+        mpn1,
+        mpn2,
+        vout_str,
+        current,
     )
     return VoltageDividerSolution(
         _select(r_hi_cmp, constraints.base_query, precision),
