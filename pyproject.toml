@@ -14,7 +14,7 @@ name = "jitxlib-voltage-divider"
 dynamic = ["version"]
 dependencies = [
   "jitx>=4.0.0,<5",
-  "jitxlib-parts>=1.0.0,<2"
+  "jitxlib-parts>=1.2.0,<1.3"
 ]
 requires-python = ">=3.12"
 authors = [
